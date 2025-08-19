@@ -227,10 +227,11 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
           variant="ghost" 
           size="sm" 
           onClick={onBack}
-          className="gap-1 p-0 hover:bg-transparent text-gray-600 hover:text-gray-900"
+          className="gap-1 p-0 hover:bg-transparent text-gray-600 hover:text-gray-900 text-xs sm:text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад к мероприятиям
+          <span className="hidden sm:inline">Назад к мероприятиям</span>
+          <span className="sm:hidden">Назад</span>
         </Button>
         <span>•</span>
         <span>Участники</span>
@@ -239,7 +240,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       {/* Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               {event && (
                 <>
@@ -255,21 +256,22 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                 </>
               )}
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
               <Button
                 variant="outline"
-                className="gap-2"
+                size="sm"
+                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
                 onClick={() => notifyGroupMutation.mutate()}
                 disabled={notifyGroupMutation.isPending}
               >
                 <Bell className="h-4 w-4" />
-                Оповестить группу о мероприятии
+                Оповестить группу
               </Button>
               <Dialog open={showReserveDialog} onOpenChange={setShowReserveDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 text-xs lg:text-sm whitespace-nowrap">
                     <Lock className="h-4 w-4" />
-                    Зарезервировать номера
+                    Зарезервировать
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -320,17 +322,13 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               
               <Button 
                 variant="outline" 
-                className="gap-2"
+                size="sm"
+                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
                 onClick={() => generatePdfMutation.mutate()}
                 disabled={generatePdfMutation.isPending}
               >
                 <FileText className="h-4 w-4" />
-                {generatePdfMutation.isPending ? "Генерация..." : "Генерировать PDF"}
-              </Button>
-              
-              <Button variant="outline" onClick={onBack} className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Назад к мероприятиям
+                {generatePdfMutation.isPending ? "PDF..." : "PDF"}
               </Button>
             </div>
           </div>
