@@ -99,7 +99,7 @@ function Dashboard() {
         {/* Page Content */}
         <main>
           {currentPage === "events" && (
-            <Events />
+            <Events onViewParticipants={handleViewParticipants} />
           )}
           {currentPage === "participants" && selectedEventId && (
             <Participants 

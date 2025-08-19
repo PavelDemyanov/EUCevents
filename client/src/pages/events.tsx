@@ -5,20 +5,55 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import type { EventWithStats } from "@shared/schema";
 
-export default function Events() {
+interface EventsProps {
+  onViewParticipants?: (eventId: number) => void;
+}
+
+export default function Events({ onViewParticipants }: EventsProps = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    name: "",
+    location: "",
+    datetime: "",
+    chatId: 1 // Default chat ID for now
+  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["/api/events"],
+  });
+
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: typeof newEvent) => {
+      await apiRequest("POST", "/api/events", eventData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      setShowCreateDialog(false);
+      setNewEvent({ name: "", location: "", datetime: "", chatId: 1 });
+      toast({
+        title: "Успешно",
+        description: "Мероприятие создано",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать мероприятие",
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteEventMutation = useMutation({
@@ -49,6 +84,11 @@ export default function Events() {
                          (statusFilter === "inactive" && !event.isActive);
     return matchesSearch && matchesStatus;
   });
+
+  const handleCreateEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    createEventMutation.mutate(newEvent);
+  };
 
   const handleDeleteEvent = (eventId: number) => {
     if (confirm("Вы уверены, что хотите удалить это мероприятие?")) {
@@ -153,7 +193,10 @@ export default function Events() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Список мероприятий</CardTitle>
-            <Button className="gap-2">
+            <Button 
+              className="gap-2"
+              onClick={() => setShowCreateDialog(true)}
+            >
               <Plus className="h-4 w-4" />
               Создать мероприятие
             </Button>
@@ -231,7 +274,12 @@ export default function Events() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <Button variant="ghost" size="sm" className="gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => onViewParticipants?.(event.id)}
+                      >
                         <Eye className="h-4 w-4" />
                         Участники
                       </Button>
@@ -264,6 +312,62 @@ export default function Events() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Create Event Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать новое мероприятие</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateEvent} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Название мероприятия</Label>
+              <Input
+                id="name"
+                value={newEvent.name}
+                onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                placeholder="Введите название мероприятия"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="location">Место проведения</Label>
+              <Input
+                id="location"
+                value={newEvent.location}
+                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                placeholder="Введите место проведения"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="datetime">Дата и время</Label>
+              <Input
+                id="datetime"
+                type="datetime-local"
+                value={newEvent.datetime}
+                onChange={(e) => setNewEvent({ ...newEvent, datetime: e.target.value })}
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => setShowCreateDialog(false)}
+              >
+                Отмена
+              </Button>
+              <Button 
+                type="submit"
+                disabled={createEventMutation.isPending}
+              >
+                {createEventMutation.isPending ? "Создание..." : "Создать"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
