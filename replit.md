@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack web application with an integrated Telegram bot for managing events and participant registration. The system allows administrators to create and manage events through a web interface while participants can register via Telegram bots. The application supports multiple events, participant management, and automated PDF report generation.
+This is a full-stack web application with an integrated Telegram bot for managing events and participant registration. The system allows administrators to create and manage events through a web interface while participants can register via Telegram bots. The application supports multiple events, participant management, automated PDF report generation, and comprehensive data editing capabilities for registered participants.
 
 ## User Preferences
 

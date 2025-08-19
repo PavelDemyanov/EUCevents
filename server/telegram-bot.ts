@@ -3,7 +3,8 @@ import { IStorage } from './storage';
 import { InsertUser } from '@shared/schema';
 
 interface UserRegistrationState {
-  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data';
+  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data' | 
+        'edit_full_name' | 'edit_phone' | 'edit_transport_type' | 'edit_transport_model';
   eventId?: number;
   fullName?: string;
   phone?: string;
@@ -95,10 +96,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         });
 
         // Add management buttons for existing registrations
-        if (activeRegistrations.length === 1) {
-          keyboard.push([{ text: "✏️ Изменить тип транспорта", callback_data: "change_transport" }]);
-          keyboard.push([{ text: "❌ Отказаться от участия", callback_data: "cancel_participation" }]);
-        }
+        activeRegistrations.forEach(registration => {
+          const event = activeEvents.find(e => e.id === registration.eventId);
+          keyboard.push([{
+            text: `⚙️ Управление "${event?.name}"`,
+            callback_data: `manage_event_${registration.eventId}`
+          }]);
+        });
 
         return bot.sendMessage(chatId, statusMessage, {
           reply_markup: { inline_keyboard: keyboard },
@@ -341,6 +345,108 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
       }
 
+      if (data.startsWith('manage_event_')) {
+        const eventId = parseInt(data.replace('manage_event_', ''));
+        const event = await storage.getEvent(eventId);
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === eventId && u.isActive);
+        
+        if (!event || !userRegistration) {
+          return bot.sendMessage(chatId, "Мероприятие или регистрация не найдены.");
+        }
+
+        const transportInfo = userRegistration.transportModel 
+          ? `${getTransportTypeLabel(userRegistration.transportType)} (${userRegistration.transportModel})`
+          : getTransportTypeLabel(userRegistration.transportType);
+
+        return bot.sendMessage(
+          chatId,
+          `🎯 Управление регистрацией на "${event.name}"\n\n` +
+          `📋 Текущие данные:\n` +
+          `👤 ФИО: ${userRegistration.fullName}\n` +
+          `📱 Телефон: ${userRegistration.phone}\n` +
+          `🚗 Транспорт: ${transportInfo}\n` +
+          `🏷️ Номер участника: ${userRegistration.participantNumber}\n\n` +
+          `Что хотите изменить?`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "👤 Изменить ФИО", callback_data: `edit_name_${eventId}` }],
+                [{ text: "📱 Изменить телефон", callback_data: `edit_phone_${eventId}` }],
+                [{ text: "🚗 Изменить транспорт", callback_data: `edit_transport_${eventId}` }],
+                [{ text: "❌ Отказаться от участия", callback_data: `cancel_event_${eventId}` }],
+                [{ text: "🔙 Назад", callback_data: "back_to_main" }]
+              ]
+            }
+          }
+        );
+      }
+
+      if (data.startsWith('edit_name_')) {
+        const eventId = parseInt(data.replace('edit_name_', ''));
+        userStates.set(telegramId, {
+          step: 'edit_full_name',
+          eventId,
+          telegramNickname,
+        });
+        
+        return bot.sendMessage(chatId, "Введите новые ФИО:");
+      }
+
+      if (data.startsWith('edit_phone_')) {
+        const eventId = parseInt(data.replace('edit_phone_', ''));
+        userStates.set(telegramId, {
+          step: 'edit_phone',
+          eventId,
+          telegramNickname,
+        });
+        
+        return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7 (XXX) XXX-XX-XX:");
+      }
+
+      if (data.startsWith('edit_transport_')) {
+        const eventId = parseInt(data.replace('edit_transport_', ''));
+        userStates.set(telegramId, {
+          step: 'edit_transport_type',
+          eventId,
+          telegramNickname,
+        });
+        
+        return bot.sendMessage(
+          chatId,
+          "Выберите новый тип транспорта:",
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🛞 Моноколесо", callback_data: "transport_monowheel" }],
+                [{ text: "🛴 Самокат", callback_data: "transport_scooter" }],
+                [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
+              ],
+            },
+          }
+        );
+      }
+
+      if (data.startsWith('cancel_event_')) {
+        const eventId = parseInt(data.replace('cancel_event_', ''));
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === eventId && u.isActive);
+        
+        if (userRegistration) {
+          await storage.deactivateUser(userRegistration.id);
+          const event = await storage.getEvent(eventId);
+          return bot.sendMessage(
+            chatId,
+            `Вы отказались от участия в мероприятии "${event?.name}". Ваши данные сохранены, но участие деактивировано.`
+          );
+        }
+      }
+
+      if (data === 'back_to_main') {
+        // Restart the /start command logic
+        return bot.sendMessage(chatId, "Используйте команду /start для возврата в главное меню.");
+      }
+
       if (data === 'cancel_participation') {
         const user = await storage.getUserByTelegramId(telegramId);
         if (user) {
@@ -363,7 +469,37 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return;
         }
 
-        // Check if this is updating an existing user
+        // Check if this is editing existing user data
+        if (state.step === 'edit_transport_type') {
+          const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+          
+          if (existingUserForEvent) {
+            // For scooter and monowheel, ask for model before updating
+            if (transportType === 'scooter' || transportType === 'monowheel') {
+              userStates.set(telegramId, {
+                ...state,
+                step: 'edit_transport_model',
+                transportType,
+              });
+              
+              return bot.sendMessage(
+                chatId,
+                `Вы выбрали ${getTransportTypeLabel(transportType)}. Теперь укажите модель:`
+              );
+            } else {
+              // For spectator, update immediately
+              await storage.updateUser(existingUserForEvent.id, { transportType, transportModel: null });
+              userStates.delete(telegramId);
+              return bot.sendMessage(
+                chatId,
+                `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+              );
+            }
+          }
+        }
+
+        // Check if this is updating an existing user (legacy logic)
         const existingUser = await storage.getUserByTelegramId(telegramId);
         if (existingUser && state.step === 'transport_type') {
           // For scooter and monowheel, ask for model before updating
@@ -548,6 +684,62 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)} (${user.transportModel})\n` +
             `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
             `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+          );
+        }
+      }
+
+      // Handle editing existing data
+      if (state.step === 'edit_full_name') {
+        if (text.length < 2) {
+          return bot.sendMessage(chatId, "ФИО должно содержать минимум 2 символа. Попробуйте ещё раз:");
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration) {
+          await storage.updateUser(userRegistration.id, { fullName: text });
+          userStates.delete(telegramId);
+          return bot.sendMessage(chatId, `ФИО успешно изменены на: ${text}`);
+        }
+      }
+
+      if (state.step === 'edit_phone') {
+        const phoneRegex = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
+        if (!phoneRegex.test(text)) {
+          return bot.sendMessage(
+            chatId,
+            "Неверный формат телефона. Используйте формат: +7 (XXX) XXX-XX-XX\nПопробуйте ещё раз:"
+          );
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration) {
+          await storage.updateUser(userRegistration.id, { phone: text });
+          userStates.delete(telegramId);
+          return bot.sendMessage(chatId, `Телефон успешно изменён на: ${text}`);
+        }
+      }
+
+      if (state.step === 'edit_transport_model') {
+        if (text.length < 2) {
+          return bot.sendMessage(chatId, "Название модели должно содержать минимум 2 символа. Попробуйте ещё раз:");
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration && state.transportType) {
+          await storage.updateUser(userRegistration.id, { 
+            transportType: state.transportType, 
+            transportModel: text 
+          });
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
           );
         }
       }
