@@ -155,6 +155,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bots management
+  app.get("/api/bots", requireAuth, async (req, res) => {
+    try {
+      const bots = await storage.getBots();
+      res.json(bots);
+    } catch (error) {
+      console.error("Error fetching bots:", error);
+      res.status(500).json({ message: "Не удалось загрузить ботов" });
+    }
+  });
+
+  app.post("/api/bots", requireAuth, async (req, res) => {
+    try {
+      const { token, name, description } = req.body;
+      const bot = await storage.createBot({ token, name, description, isActive: true });
+      res.json(bot);
+    } catch (error) {
+      console.error("Error creating bot:", error);
+      res.status(500).json({ message: "Не удалось создать бота" });
+    }
+  });
+
+  app.delete("/api/bots/:botId", requireAuth, async (req, res) => {
+    try {
+      const botId = parseInt(req.params.botId);
+      await storage.deleteBot(botId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting bot:", error);
+      res.status(500).json({ message: "Не удалось удалить бота" });
+    }
+  });
+
+  // Chats management  
+  app.get("/api/chats", requireAuth, async (req, res) => {
+    try {
+      const chats = await storage.getChats();
+      res.json(chats);
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+      res.status(500).json({ message: "Не удалось загрузить чаты" });
+    }
+  });
+
+  app.post("/api/chats", requireAuth, async (req, res) => {
+    try {
+      const { chatId, title, botId } = req.body;
+      const chat = await storage.createChat({ chatId, title, botId, isActive: true });
+      res.json(chat);
+    } catch (error) {
+      console.error("Error creating chat:", error);
+      res.status(500).json({ message: "Не удалось создать чат" });
+    }
+  });
+
+  app.delete("/api/chats/:chatId", requireAuth, async (req, res) => {
+    try {
+      const chatId = parseInt(req.params.chatId);
+      await storage.deleteChat(chatId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      res.status(500).json({ message: "Не удалось удалить чат" });
+    }
+  });
+
   // Participants routes
   app.get("/api/events/:id/participants", requireAuth, async (req, res) => {
     try {

@@ -12,6 +12,7 @@ import {
   type Bot,
   type InsertBot,
   type Chat,
+  type InsertChat,
   type ReservedNumber,
   type InsertReservedNumber,
   type AdminUser,
@@ -39,6 +40,14 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
+
+  // Bot operations
+  createBot(botData: InsertBot): Promise<Bot>;
+  deleteBot(id: number): Promise<void>;
+
+  // Chat operations
+  createChat(chatData: InsertChat): Promise<Chat>;
+  deleteChat(id: number): Promise<void>;
 
   // Bot operations
   getBots(): Promise<Bot[]>;
@@ -237,6 +246,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bots).orderBy(bots.name);
   }
 
+  async createBot(botData: InsertBot): Promise<Bot> {
+    const [bot] = await db.insert(bots).values(botData).returning();
+    return bot;
+  }
+
+  async deleteBot(id: number): Promise<void> {
+    await db.delete(bots).where(eq(bots.id, id));
+  }
+
   async getBot(id: number): Promise<Bot | undefined> {
     const [bot] = await db.select().from(bots).where(eq(bots.id, id));
     return bot;
@@ -268,6 +286,15 @@ export class DatabaseStorage implements IStorage {
   // Chat operations
   async getChats(): Promise<Chat[]> {
     return await db.select().from(chats).orderBy(chats.title);
+  }
+
+  async createChat(chatData: InsertChat): Promise<Chat> {
+    const [chat] = await db.insert(chats).values(chatData).returning();
+    return chat;
+  }
+
+  async deleteChat(id: number): Promise<void> {
+    await db.delete(chats).where(eq(chats.id, id));
   }
 
   async getChat(id: number): Promise<Chat | undefined> {

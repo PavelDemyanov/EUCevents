@@ -24,7 +24,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     name: "",
     location: "",
     datetime: "",
-    chatId: 1 // Default chat ID for now
+    chatId: 1
   });
   
   const { toast } = useToast();
@@ -32,6 +32,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["/api/events"],
+  });
+
+  const { data: chats = [] } = useQuery({
+    queryKey: ["/api/chats"],
   });
 
   const createEventMutation = useMutation({
@@ -349,6 +353,29 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 onChange={(e) => setNewEvent({ ...newEvent, datetime: e.target.value })}
                 required
               />
+            </div>
+            <div>
+              <Label htmlFor="chat">Telegram-чат</Label>
+              <select
+                id="chat"
+                value={newEvent.chatId}
+                onChange={(e) => setNewEvent({ ...newEvent, chatId: parseInt(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              >
+                {chats.length === 0 ? (
+                  <option value="">Нет доступных чатов</option>
+                ) : (
+                  chats.map((chat: any) => (
+                    <option key={chat.id} value={chat.id}>
+                      {chat.title} (ID: {chat.chatId})
+                    </option>
+                  ))
+                )}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Настройте чаты в разделе "Настройки"
+              </p>
             </div>
             <div className="flex justify-end space-x-2">
               <Button 

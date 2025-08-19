@@ -7,14 +7,15 @@ import { useAuth } from "@/hooks/useAuth";
 import Login from "@/pages/login";
 import Events from "@/pages/events";
 import Participants from "@/pages/participants";
+import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/hooks/useAuth";
-import { Calendar, Users, Settings, LogOut, Menu } from "lucide-react";
+import { Calendar, Users, Settings as SettingsIcon, LogOut, Menu } from "lucide-react";
 
 function Dashboard() {
-  const [currentPage, setCurrentPage] = useState<"events" | "participants">("events");
+  const [currentPage, setCurrentPage] = useState<"events" | "participants" | "settings">("events");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const logout = useLogout();
   const { user } = useAuth();
@@ -67,12 +68,9 @@ function Dashboard() {
           )}
           <button 
             className="sidebar-link w-full text-left"
-            onClick={() => {
-              // Пока что просто показываем уведомление
-              alert("Раздел настроек находится в разработке");
-            }}
+            onClick={() => setCurrentPage("settings")}
           >
-            <Settings className="w-5 h-5 mr-3" />
+            <SettingsIcon className="w-5 h-5 mr-3" />
             Настройки
           </button>
         </nav>
@@ -95,7 +93,9 @@ function Dashboard() {
         {/* Header */}
         <header className="bg-white shadow-sm border-b h-16 flex items-center justify-between px-6">
           <h1 className="text-xl font-semibold text-gray-900">
-            {currentPage === "events" ? "Мероприятия" : "Участники мероприятия"}
+            {currentPage === "events" ? "Мероприятия" : 
+             currentPage === "participants" ? "Участники мероприятия" :
+             "Настройки системы"}
           </h1>
           <div className="text-sm text-gray-600">
             Администратор: <span className="font-medium">{user?.username}</span>
@@ -112,6 +112,9 @@ function Dashboard() {
               eventId={selectedEventId} 
               onBack={handleBackToEvents}
             />
+          )}
+          {currentPage === "settings" && (
+            <Settings />
           )}
         </main>
       </div>
