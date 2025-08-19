@@ -202,11 +202,18 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       key: 'transportType' as keyof UserWithEvent,
       header: 'Тип транспорта',
       sortable: true,
-      render: (value: string) => (
-        <Badge className={`transport-badge-${value}`}>
-          {getTransportIcon(value)} {getTransportTypeLabel(value)}
-        </Badge>
-      ),
+      render: (value: string, participant: UserWithEvent) => {
+        const model = participant.transportModel;
+        const label = model 
+          ? `${getTransportTypeLabel(value)} (${model})`
+          : getTransportTypeLabel(value);
+        
+        return (
+          <Badge className={`transport-badge-${value}`}>
+            {getTransportIcon(value)} {label}
+          </Badge>
+        );
+      },
     },
     {
       key: 'isActive' as keyof UserWithEvent,
@@ -243,17 +250,17 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               {event && (
-                <>
-                  <CardTitle className="text-2xl mb-2">{(event as any).name}</CardTitle>
+                <div>
+                  <CardTitle className="text-2xl mb-2">{(event as any)?.name || 'Мероприятие'}</CardTitle>
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
-                      📍 {(event as any).location}
+                      📍 {(event as any)?.location || 'Место не указано'}
                     </span>
                     <span className="flex items-center gap-1">
-                      📅 {formatDateTime((event as any).datetime.toString())}
+                      📅 {(event as any)?.datetime ? formatDateTime((event as any).datetime.toString()) : 'Время не указано'}
                     </span>
                   </div>
-                </>
+                </div>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:gap-3">
@@ -292,11 +299,11 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                       </p>
                     </div>
                     
-                    {reservedNumbers.length > 0 && (
+                    {(reservedNumbers as any)?.length > 0 && (
                       <div>
                         <Label>Текущие зарезервированные номера:</Label>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {(reservedNumbers as ReservedNumber[]).map((rn) => (
+                          {(reservedNumbers as ReservedNumber[]).map((rn: any) => (
                             <Badge key={rn.id} variant="outline">
                               {rn.number}
                             </Badge>

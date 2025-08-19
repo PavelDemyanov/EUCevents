@@ -3,10 +3,11 @@ import { IStorage } from './storage';
 import { InsertUser } from '@shared/schema';
 
 interface UserRegistrationState {
-  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type';
+  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model';
   eventId?: number;
   fullName?: string;
   phone?: string;
+  transportType?: 'monowheel' | 'scooter' | 'spectator';
   telegramNickname?: string;
 }
 
@@ -38,13 +39,17 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       const existingUser = await storage.getUserByTelegramId(telegramId);
       if (existingUser && existingUser.isActive) {
         const event = await storage.getEvent(existingUser.eventId);
+        const transportInfo = existingUser.transportModel 
+          ? `${getTransportTypeLabel(existingUser.transportType)} (${existingUser.transportModel})`
+          : getTransportTypeLabel(existingUser.transportType);
+
         return bot.sendMessage(
           chatId,
           `Вы уже зарегистрированы на мероприятие "${event?.name}"!\n\n` +
           `📋 Ваши данные:\n` +
           `👤 ФИО: ${existingUser.fullName}\n` +
           `📱 Телефон: ${existingUser.phone}\n` +
-          `🚗 Транспорт: ${getTransportTypeLabel(existingUser.transportType)}\n` +
+          `🚗 Транспорт: ${transportInfo}\n` +
           `🏷️ Номер участника: ${existingUser.participantNumber}\n\n` +
           `Чтобы изменить тип транспорта или отказаться от участия, выберите действие:`,
           {
@@ -196,15 +201,44 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         // Check if this is updating an existing user
         const existingUser = await storage.getUserByTelegramId(telegramId);
         if (existingUser && state.step === 'transport_type') {
-          await storage.updateUser(existingUser.id, { transportType });
-          userStates.delete(telegramId);
+          // For scooter and monowheel, ask for model before updating
+          if (transportType === 'scooter' || transportType === 'monowheel') {
+            userStates.set(telegramId, {
+              ...state,
+              step: 'transport_model',
+              transportType,
+            });
+            
+            return bot.sendMessage(
+              chatId,
+              `Вы выбрали ${getTransportTypeLabel(transportType)}. Теперь укажите модель:`
+            );
+          } else {
+            // For spectator, update immediately
+            await storage.updateUser(existingUser.id, { transportType, transportModel: null });
+            userStates.delete(telegramId);
+            return bot.sendMessage(
+              chatId,
+              `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+            );
+          }
+        }
+
+        // For new registration, check if we need model
+        if (transportType === 'scooter' || transportType === 'monowheel') {
+          userStates.set(telegramId, {
+            ...state,
+            step: 'transport_model',
+            transportType,
+          });
+          
           return bot.sendMessage(
             chatId,
-            `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+            `Вы выбрали ${getTransportTypeLabel(transportType)}. Теперь укажите модель:`
           );
         }
 
-        // Complete new registration if all data is available
+        // Complete new registration for spectator
         if (state.eventId && state.fullName && state.phone && state.step === 'transport_type') {
           const userData: InsertUser = {
             telegramId,
@@ -212,6 +246,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             fullName: state.fullName,
             phone: state.phone,
             transportType,
+            transportModel: null,
             eventId: state.eventId,
             isActive: true,
           };
@@ -298,6 +333,56 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             },
           }
         );
+      }
+
+      if (state.step === 'transport_model') {
+        if (text.length < 2) {
+          return bot.sendMessage(chatId, "Название модели должно содержать минимум 2 символа. Попробуйте ещё раз:");
+        }
+
+        // Check if this is updating an existing user
+        const existingUser = await storage.getUserByTelegramId(telegramId);
+        if (existingUser) {
+          await storage.updateUser(existingUser.id, { 
+            transportType: state.transportType!, 
+            transportModel: text 
+          });
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `Тип транспорта изменён на: ${getTransportTypeLabel(state.transportType!)} (${text})`
+          );
+        }
+
+        // Complete new registration
+        if (state.eventId && state.fullName && state.phone && state.transportType) {
+          const userData: InsertUser = {
+            telegramId,
+            telegramNickname: state.telegramNickname || null,
+            fullName: state.fullName,
+            phone: state.phone,
+            transportType: state.transportType!,
+            transportModel: text,
+            eventId: state.eventId,
+            isActive: true,
+          };
+
+          const user = await storage.createUser(userData);
+          const event = await storage.getEvent(state.eventId);
+
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
+            `📋 Ваши данные:\n` +
+            `📅 Мероприятие: ${event?.name}\n` +
+            `👤 ФИО: ${user.fullName}\n` +
+            `📱 Телефон: ${user.phone}\n` +
+            `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)} (${user.transportModel})\n` +
+            `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
+            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+          );
+        }
       }
     } catch (error) {
       console.error('Message handling error:', error);

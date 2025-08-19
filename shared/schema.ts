@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   transportType: varchar("transport_type", { length: 20 }).notNull(), // monowheel, scooter, spectator
+  transportModel: varchar("transport_model", { length: 100 }), // model name for monowheel/scooter
   participantNumber: integer("participant_number"),
   isActive: boolean("is_active").default(true).notNull(),
   eventId: integer("event_id").notNull(),

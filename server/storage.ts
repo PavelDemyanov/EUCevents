@@ -36,18 +36,11 @@ export interface IStorage {
   // Event operations
   getEvents(): Promise<EventWithStats[]>;
   getEvent(id: number): Promise<Event | undefined>;
+  getActiveEvents(): Promise<Event[]>;
   getActiveEventsByChatId(chatId: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
-
-  // Bot operations
-  createBot(botData: InsertBot): Promise<Bot>;
-  deleteBot(id: number): Promise<void>;
-
-  // Chat operations
-  createChat(chatData: InsertChat): Promise<Chat>;
-  deleteChat(id: number): Promise<void>;
 
   // Bot operations
   getBots(): Promise<Bot[]>;
@@ -56,6 +49,8 @@ export interface IStorage {
   createBot(bot: InsertBot): Promise<Bot>;
   updateBot(id: number, updates: Partial<InsertBot>): Promise<Bot>;
   deleteBot(id: number): Promise<void>;
+  activateBot(id: number): Promise<void>;
+  deactivateBot(id: number): Promise<void>;
 
   // Chat operations
   getChats(): Promise<Chat[]>;
@@ -63,6 +58,7 @@ export interface IStorage {
   getChatByChatId(chatId: string): Promise<Chat | undefined>;
   createChat(chat: Omit<Chat, 'id' | 'createdAt'>): Promise<Chat>;
   updateChat(id: number, updates: Partial<Chat>): Promise<Chat>;
+  deleteChat(id: number): Promise<void>;
 
   // Reserved numbers operations
   getReservedNumbers(eventId: number): Promise<ReservedNumber[]>;
@@ -209,19 +205,19 @@ export class DatabaseStorage implements IStorage {
     return event;
   }
 
-  async getActiveEventsByChatId(chatId: number): Promise<Event[]> {
-    return await db
-      .select()
-      .from(events)
-      .where(and(eq(events.chatId, chatId), eq(events.isActive, true)))
-      .orderBy(events.datetime);
-  }
-
   async getActiveEvents(): Promise<Event[]> {
     return await db
       .select()
       .from(events)
       .where(eq(events.isActive, true))
+      .orderBy(desc(events.datetime));
+  }
+
+  async getActiveEventsByChatId(chatId: number): Promise<Event[]> {
+    return await db
+      .select()
+      .from(events)
+      .where(and(eq(events.chatId, chatId), eq(events.isActive, true)))
       .orderBy(events.datetime);
   }
 
