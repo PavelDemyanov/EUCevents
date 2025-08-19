@@ -103,7 +103,9 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/participants`] });
+      // Invalidate multiple related queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "participants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({
         title: "Успешно",
         description: "Данные участника обновлены",
