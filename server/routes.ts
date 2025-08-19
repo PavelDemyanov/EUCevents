@@ -155,6 +155,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Statistics endpoint
+  app.get("/api/stats/today", requireAuth, async (req, res) => {
+    try {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+      
+      const todayParticipants = await storage.getTodayParticipants(todayStart, todayEnd);
+      
+      res.json({
+        todayRegistrations: todayParticipants.length
+      });
+    } catch (error) {
+      console.error("Error fetching today stats:", error);
+      res.status(500).json({ message: "Ошибка получения статистики" });
+    }
+  });
+
   // Bots management
   app.get("/api/bots", requireAuth, async (req, res) => {
     try {

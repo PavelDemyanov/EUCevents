@@ -73,6 +73,9 @@ export interface IStorage {
   getAdminByUsername(username: string): Promise<AdminUser | undefined>;
   validateAdminPassword(username: string, password: string): Promise<boolean>;
   createAdmin(username: string, password: string): Promise<AdminUser>;
+
+  // Statistics operations
+  getTodayParticipants(startDate: Date, endDate: Date): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -388,6 +391,20 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return admin;
+  }
+
+  // Statistics operations
+  async getTodayParticipants(startDate: Date, endDate: Date): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          sql`${users.createdAt} >= ${startDate}`,
+          sql`${users.createdAt} < ${endDate}`,
+          eq(users.isActive, true)
+        )
+      );
   }
 }
 

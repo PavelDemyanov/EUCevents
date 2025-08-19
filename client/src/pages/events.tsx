@@ -40,6 +40,14 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     queryKey: ["/api/chats"],
   });
 
+  const { data: bots = [] } = useQuery({
+    queryKey: ["/api/bots"],
+  });
+
+  const { data: todayStats } = useQuery({
+    queryKey: ["/api/stats/today"],
+  });
+
   const createEventMutation = useMutation({
     mutationFn: async (eventData: typeof newEvent) => {
       await apiRequest("POST", "/api/events", eventData);
@@ -181,8 +189,8 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const eventsTyped = events as EventWithStats[];
   const totalEvents = eventsTyped.length;
   const totalParticipants = eventsTyped.reduce((sum: number, event: EventWithStats) => sum + event.participantCount, 0);
-  const totalBots = 3; // Placeholder - should come from API
-  const todayRegistrations = 15; // Placeholder - should come from API
+  const totalBots = (bots as any[]).length;
+  const todayRegistrations = (todayStats as any)?.todayRegistrations || 0;
 
   return (
     <div className="p-6 space-y-6">
