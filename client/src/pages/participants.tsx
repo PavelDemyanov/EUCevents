@@ -221,16 +221,38 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center space-x-2 text-sm text-gray-600">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onBack}
+          className="gap-1 p-0 hover:bg-transparent text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Назад к мероприятиям
+        </Button>
+        <span>•</span>
+        <span>Участники</span>
+      </div>
+
       {/* Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Участники мероприятия</CardTitle>
               {event && (
-                <p className="text-sm text-gray-600 mt-1">
-                  {(event as any).name} • {(event as any).location} • {formatDateTime((event as any).datetime.toString())}
-                </p>
+                <>
+                  <CardTitle className="text-2xl mb-2">{(event as any).name}</CardTitle>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      📍 {(event as any).location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      📅 {formatDateTime((event as any).datetime.toString())}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
             <div className="flex items-center space-x-3">

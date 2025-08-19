@@ -17,17 +17,20 @@ import { Calendar, Users, Settings as SettingsIcon, LogOut, Menu } from "lucide-
 function Dashboard() {
   const [currentPage, setCurrentPage] = useState<"events" | "participants" | "settings">("events");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedEventName, setSelectedEventName] = useState<string>("");
   const logout = useLogout();
   const { user } = useAuth();
 
-  const handleViewParticipants = (eventId: number) => {
+  const handleViewParticipants = (eventId: number, eventName?: string) => {
     setSelectedEventId(eventId);
+    setSelectedEventName(eventName || "");
     setCurrentPage("participants");
   };
 
   const handleBackToEvents = () => {
     setCurrentPage("events");
     setSelectedEventId(null);
+    setSelectedEventName("");
   };
 
   const handleLogout = () => {
@@ -63,7 +66,14 @@ function Dashboard() {
               }`}
             >
               <Users className="w-5 h-5 mr-3" />
-              Участники
+              <div>
+                <div>Участники</div>
+                {selectedEventName && (
+                  <div className="text-xs text-gray-500 mt-0.5 truncate">
+                    {selectedEventName}
+                  </div>
+                )}
+              </div>
             </button>
           )}
           <button 

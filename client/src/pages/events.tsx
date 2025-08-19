@@ -13,7 +13,7 @@ import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import type { EventWithStats } from "@shared/schema";
 
 interface EventsProps {
-  onViewParticipants?: (eventId: number) => void;
+  onViewParticipants?: (eventId: number, eventName?: string) => void;
 }
 
 export default function Events({ onViewParticipants }: EventsProps = {}) {
@@ -335,7 +335,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                         variant="ghost" 
                         size="sm" 
                         className="gap-1"
-                        onClick={() => onViewParticipants?.(event.id)}
+                        onClick={() => onViewParticipants?.(event.id, event.name)}
                       >
                         <Eye className="h-4 w-4" />
                         Участники
