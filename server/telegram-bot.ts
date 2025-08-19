@@ -473,10 +473,12 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Название модели должно содержать минимум 2 символа. Попробуйте ещё раз:");
         }
 
-        // Check if this is updating an existing user
-        const existingUser = await storage.getUserByTelegramId(telegramId);
-        if (existingUser) {
-          await storage.updateUser(existingUser.id, { 
+        // Check if this is updating an existing user for the current event
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (existingUserForEvent) {
+          await storage.updateUser(existingUserForEvent.id, { 
             transportType: state.transportType!, 
             transportModel: text 
           });
