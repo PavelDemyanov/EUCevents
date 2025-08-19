@@ -499,29 +499,33 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           }
         }
 
-        // Check if this is updating an existing user (legacy logic)
-        const existingUser = await storage.getUserByTelegramId(telegramId);
-        if (existingUser && state.step === 'transport_type') {
-          // For scooter and monowheel, ask for model before updating
-          if (transportType === 'scooter' || transportType === 'monowheel') {
-            userStates.set(telegramId, {
-              ...state,
-              step: 'transport_model',
-              transportType,
-            });
-            
-            return bot.sendMessage(
-              chatId,
-              `Вы выбрали ${getTransportTypeLabel(transportType)}. Теперь укажите модель:`
-            );
-          } else {
-            // For spectator, update immediately
-            await storage.updateUser(existingUser.id, { transportType, transportModel: null });
-            userStates.delete(telegramId);
-            return bot.sendMessage(
-              chatId,
-              `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
-            );
+        // Check if this is updating an existing user (legacy logic) - for all users
+        if (state.step === 'transport_type') {
+          const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId);
+          
+          if (existingUserForEvent && existingUserForEvent.isActive) {
+            // For scooter and monowheel, ask for model before updating
+            if (transportType === 'scooter' || transportType === 'monowheel') {
+              userStates.set(telegramId, {
+                ...state,
+                step: 'transport_model',
+                transportType,
+              });
+              
+              return bot.sendMessage(
+                chatId,
+                `Вы выбрали ${getTransportTypeLabel(transportType)}. Теперь укажите модель:`
+              );
+            } else {
+              // For spectator, update immediately
+              await storage.updateUser(existingUserForEvent.id, { transportType, transportModel: null });
+              userStates.delete(telegramId);
+              return bot.sendMessage(
+                chatId,
+                `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+              );
+            }
           }
         }
 
@@ -541,21 +545,28 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Complete new registration for spectator
         if (state.eventId && state.fullName && state.phone && state.step === 'transport_type') {
-          // Check if user is already registered for this event
+          // Check if user is already registered for this event (active OR inactive)
           const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId);
           
           if (existingUserForEvent) {
-            // Update existing registration instead of creating new one
+            // Update existing registration and reactivate
             await storage.updateUser(existingUserForEvent.id, { 
               transportType,
-              transportModel: null 
+              transportModel: null,
+              fullName: state.fullName,
+              phone: state.phone,
+              isActive: true
             });
             userStates.delete(telegramId);
             return bot.sendMessage(
               chatId,
-              `Ваша регистрация обновлена!\n\n` +
-              `🚗 Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+              `🎉 Регистрация успешна!\n\n` +
+              `📋 Ваши данные обновлены:\n` +
+              `👤 ФИО: ${state.fullName}\n` +
+              `📱 Телефон: ${state.phone}\n` +
+              `👀 Статус: Зритель\n` +
+              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`
             );
           }
 
@@ -661,9 +672,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Check if this is updating an existing user for the current event
         const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-        const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId);
         
-        if (existingUserForEvent) {
+        if (existingUserForEvent && existingUserForEvent.isActive) {
           await storage.updateUser(existingUserForEvent.id, { 
             transportType: state.transportType!, 
             transportModel: text 
@@ -677,21 +688,28 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Complete new registration
         if (state.eventId && state.fullName && state.phone && state.transportType) {
-          // Check if user is already registered for this event
+          // Check if user is already registered for this event (active OR inactive)
           const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId);
           
           if (existingUserForEvent) {
-            // Update existing registration instead of creating new one
+            // Update existing registration and reactivate
             await storage.updateUser(existingUserForEvent.id, { 
               transportType: state.transportType!,
-              transportModel: text 
+              transportModel: text,
+              fullName: state.fullName,
+              phone: state.phone,
+              isActive: true
             });
             userStates.delete(telegramId);
             return bot.sendMessage(
               chatId,
-              `Ваша регистрация обновлена!\n\n` +
-              `🚗 Тип транспорта изменён на: ${getTransportTypeLabel(state.transportType!)} (${text})`
+              `🎉 Регистрация успешна!\n\n` +
+              `📋 Ваши данные обновлены:\n` +
+              `👤 ФИО: ${state.fullName}\n` +
+              `📱 Телефон: ${state.phone}\n` +
+              `🚗 Транспорт: ${getTransportTypeLabel(state.transportType!)} (${text})\n` +
+              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`
             );
           }
 
