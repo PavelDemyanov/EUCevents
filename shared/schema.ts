@@ -6,7 +6,8 @@ import {
   integer, 
   timestamp, 
   boolean,
-  serial
+  serial,
+  unique
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -15,7 +16,7 @@ import { z } from "zod";
 // Users table for participant registration
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  telegramId: varchar("telegram_id", { length: 50 }).unique(),
+  telegramId: varchar("telegram_id", { length: 50 }).notNull(),
   telegramNickname: varchar("telegram_nickname", { length: 100 }),
   fullName: text("full_name").notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
@@ -26,7 +27,10 @@ export const users = pgTable("users", {
   eventId: integer("event_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // One user can register for multiple events, but only once per event
+  telegramEventUnique: unique().on(table.telegramId, table.eventId)
+}));
 
 // Bots table for Telegram bot management
 export const bots = pgTable("bots", {
