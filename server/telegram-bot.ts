@@ -3,12 +3,16 @@ import { IStorage } from './storage';
 import { InsertUser } from '@shared/schema';
 
 interface UserRegistrationState {
-  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model';
+  step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data';
   eventId?: number;
   fullName?: string;
   phone?: string;
   transportType?: 'monowheel' | 'scooter' | 'spectator';
   telegramNickname?: string;
+  existingData?: {
+    fullName: string;
+    phone: string;
+  };
 }
 
 const userStates = new Map<string, UserRegistrationState>();
@@ -79,7 +83,47 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       });
 
       if (activeEvents.length === 1) {
-        // Auto-select single event
+        // Auto-select single event, but check for existing data first
+        const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        
+        if (existingRegistrations.length > 0) {
+          // Show existing user data for confirmation
+          const lastRegistration = existingRegistrations[existingRegistrations.length - 1];
+          
+          userStates.set(telegramId, {
+            step: 'confirm_existing_data',
+            eventId: activeEvents[0].id,
+            telegramNickname,
+            existingData: {
+              fullName: lastRegistration.fullName,
+              phone: lastRegistration.phone,
+            }
+          });
+
+          return bot.sendMessage(
+            chatId,
+            `Добро пожаловать на регистрацию мероприятия!\n\n` +
+            `📅 ${activeEvents[0].name}\n` +
+            `📍 ${activeEvents[0].location}\n` +
+            `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
+            `📋 Найдены ваши данные из предыдущих регистраций:\n` +
+            `👤 ФИО: ${lastRegistration.fullName}\n` +
+            `📱 Телефон: ${lastRegistration.phone}\n\n` +
+            `Использовать эти данные для регистрации?`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "✅ Да, использовать", callback_data: "use_existing_data" },
+                    { text: "✏️ Изменить данные", callback_data: "change_data" }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+
+        // No existing data - proceed with normal registration
         userStates.set(telegramId, {
           step: 'full_name',
           eventId: activeEvents[0].id,
@@ -139,6 +183,44 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Мероприятие не найдено.");
         }
 
+        // Check if user already has existing registrations
+        const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        
+        if (existingRegistrations.length > 0) {
+          // Show existing user data for confirmation
+          const lastRegistration = existingRegistrations[existingRegistrations.length - 1];
+          
+          userStates.set(telegramId, {
+            step: 'confirm_existing_data',
+            eventId,
+            telegramNickname: query.from.username,
+            existingData: {
+              fullName: lastRegistration.fullName,
+              phone: lastRegistration.phone,
+            }
+          });
+
+          return bot.sendMessage(
+            chatId,
+            `Вы выбрали: "${event.name}"\n\n` +
+            `📋 Найдены ваши данные из предыдущих регистраций:\n` +
+            `👤 ФИО: ${lastRegistration.fullName}\n` +
+            `📱 Телефон: ${lastRegistration.phone}\n\n` +
+            `Использовать эти данные для регистрации?`,
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "✅ Да, использовать", callback_data: "use_existing_data" },
+                    { text: "✏️ Изменить данные", callback_data: "change_data" }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+
+        // No existing data - proceed with normal registration
         userStates.set(telegramId, {
           step: 'full_name',
           eventId,
@@ -173,6 +255,57 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               ],
             },
           }
+        );
+      }
+
+      if (data === 'use_existing_data') {
+        const state = userStates.get(telegramId);
+        if (!state || !state.existingData || !state.eventId) {
+          return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
+        }
+
+        // Use existing data, go straight to transport type selection
+        userStates.set(telegramId, {
+          ...state,
+          step: 'transport_type',
+          fullName: state.existingData.fullName,
+          phone: state.existingData.phone,
+        });
+
+        return bot.sendMessage(
+          chatId,
+          `Отлично! Используем ваши данные:\n` +
+          `👤 ФИО: ${state.existingData.fullName}\n` +
+          `📱 Телефон: ${state.existingData.phone}\n\n` +
+          `Теперь выберите тип транспорта:`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🛴 Моноколесо", callback_data: "transport_monowheel" }],
+                [{ text: "🛵 Самокат", callback_data: "transport_scooter" }],
+                [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
+              ],
+            },
+          }
+        );
+      }
+
+      if (data === 'change_data') {
+        const state = userStates.get(telegramId);
+        if (!state || !state.eventId) {
+          return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
+        }
+
+        // Start fresh registration process
+        userStates.set(telegramId, {
+          step: 'full_name',
+          eventId: state.eventId,
+          telegramNickname: state.telegramNickname,
+        });
+
+        return bot.sendMessage(
+          chatId,
+          `Хорошо, введём данные заново.\n\nПожалуйста, введите ваши ФИО:`
         );
       }
 

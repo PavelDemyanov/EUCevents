@@ -27,6 +27,7 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
+  getUserRegistrationsByTelegramId(telegramId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
   getUsersByEventId(eventId: number): Promise<UserWithEvent[]>;
@@ -84,6 +85,11 @@ export class DatabaseStorage implements IStorage {
   async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId));
     return user;
+  }
+
+  async getUserRegistrationsByTelegramId(telegramId: string): Promise<User[]> {
+    const userRegistrations = await db.select().from(users).where(eq(users.telegramId, telegramId));
+    return userRegistrations;
   }
 
   async createUser(user: InsertUser): Promise<User> {
