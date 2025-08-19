@@ -324,6 +324,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF generation route
+  app.get("/api/events/:eventId/pdf", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const pdfBuffer = await generateParticipantsPDF(eventId, storage);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="participants-${eventId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      res.status(500).json({ message: "Не удалось создать PDF" });
+    }
+  });
+
+  // Group notification route
+  app.post("/api/events/:eventId/notify-group", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      
+      // Get event details with statistics
+      const events = await storage.getEvents();
+      const eventWithStats = events.find(e => e.id === eventId);
+      
+      if (!eventWithStats || !eventWithStats.chat) {
+        return res.status(404).json({ message: "Мероприятие или чат не найдены" });
+      }
+
+      // Get bot instance - we need to pass it from somewhere
+      // For now, get the first active bot from storage
+      const bots = await storage.getBots();
+      const activeBot = bots.find(b => b.id === eventWithStats.chat.botId && b.isActive);
+      
+      if (!activeBot) {
+        return res.status(400).json({ message: "Бот не активен" });
+      }
+
+      // Create temporary bot instance for notification
+      const TelegramBot = (await import('node-telegram-bot-api')).default;
+      const tempBot = new TelegramBot(activeBot.token);
+
+      // Send notification to group
+      const { sendEventNotificationToGroup } = await import('./telegram-bot');
+      await sendEventNotificationToGroup(tempBot, eventWithStats.chat.chatId, {
+        name: eventWithStats.name,
+        location: eventWithStats.location,
+        datetime: eventWithStats.datetime,
+        monowheelCount: eventWithStats.monowheelCount,
+        scooterCount: eventWithStats.scooterCount,
+        spectatorCount: eventWithStats.spectatorCount,
+        totalCount: eventWithStats.participantCount,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ message: "Не удалось отправить уведомление" });
+    }
+  });
+
+  // PDF generation route
   app.get("/api/events/:id/pdf", requireAuth, async (req, res) => {
     try {
       const eventId = parseInt(req.params.id);

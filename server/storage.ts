@@ -214,6 +214,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(events.datetime);
   }
 
+  async getActiveEvents(): Promise<Event[]> {
+    return await db
+      .select()
+      .from(events)
+      .where(eq(events.isActive, true))
+      .orderBy(events.datetime);
+  }
+
   async createEvent(event: InsertEvent): Promise<Event> {
     const [createdEvent] = await db
       .insert(events)

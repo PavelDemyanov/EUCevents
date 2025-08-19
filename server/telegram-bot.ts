@@ -25,6 +25,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       return bot.sendMessage(chatId, "Ошибка получения данных пользователя.");
     }
 
+    // Only allow registration in private chats
+    if (msg.chat.type !== 'private') {
+      return bot.sendMessage(
+        chatId,
+        "Регистрация доступна только в личных сообщениях с ботом. Напишите мне в личку для регистрации на мероприятие!"
+      );
+    }
+
     try {
       // Check if user is already registered
       const existingUser = await storage.getUserByTelegramId(telegramId);
@@ -50,16 +58,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
       }
 
-      // Get chat info and find linked events
-      const chat = await storage.getChatByChatId(chatId);
-      if (!chat) {
-        return bot.sendMessage(
-          chatId,
-          "Этот чат не связан с системой управления мероприятиями. Обратитесь к администратору."
-        );
-      }
-
-      const activeEvents = await storage.getActiveEventsByChatId(chat.id);
+      // Get all active events (not limited by chat)
+      const activeEvents = await storage.getActiveEvents();
       if (activeEvents.length === 0) {
         return bot.sendMessage(
           chatId,
@@ -306,6 +306,42 @@ export async function startTelegramBot(token: string, storage: IStorage) {
   });
 
   console.log(`Telegram bot started with token: ${token.substring(0, 10)}...`);
+
+  // Export bot instance for external use
+  return bot;
+}
+
+export async function sendEventNotificationToGroup(
+  bot: TelegramBot, 
+  chatId: string, 
+  eventData: {
+    name: string;
+    location: string;
+    datetime: Date;
+    monowheelCount: number;
+    scooterCount: number;
+    spectatorCount: number;
+    totalCount: number;
+  }
+) {
+  const message = `🏁 УВЕДОМЛЕНИЕ О МЕРОПРИЯТИИ 🏁\n\n` +
+    `📅 ${eventData.name}\n` +
+    `📍 ${eventData.location}\n` +
+    `🕐 ${formatDateTime(eventData.datetime)}\n\n` +
+    `📊 ТЕКУЩАЯ СТАТИСТИКА УЧАСТНИКОВ:\n` +
+    `🛞 Моноколесо: ${eventData.monowheelCount} чел.\n` +
+    `🛴 Самокат: ${eventData.scooterCount} чел.\n` +
+    `👀 Зрители: ${eventData.spectatorCount} чел.\n` +
+    `📋 Всего зарегистрировано: ${eventData.totalCount} чел.\n\n` +
+    `🤖 Для регистрации напишите мне в личные сообщения и отправьте команду /start`;
+
+  try {
+    await bot.sendMessage(chatId, message);
+    console.log(`Event notification sent to group ${chatId}`);
+  } catch (error) {
+    console.error(`Failed to send notification to group ${chatId}:`, error);
+    throw error;
+  }
 }
 
 function getTransportTypeLabel(type: string): string {

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Lock, FileText, Download } from "lucide-react";
+import { ArrowLeft, Lock, FileText, Download, Bell } from "lucide-react";
 import type { UserWithEvent, ReservedNumber } from "@shared/schema";
 
 interface ParticipantsProps {
@@ -82,6 +82,25 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       toast({
         title: "Успешно",
         description: "PDF сгенерирован и загружен",
+      });
+    },
+  });
+
+  const notifyGroupMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/events/${eventId}/notify-group`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Успешно",
+        description: "Уведомление отправлено в группу",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось отправить уведомление",
+        variant: "destructive",
       });
     },
   });
@@ -215,6 +234,15 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               )}
             </div>
             <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => notifyGroupMutation.mutate()}
+                disabled={notifyGroupMutation.isPending}
+              >
+                <Bell className="h-4 w-4" />
+                Оповестить группу о мероприятии
+              </Button>
               <Dialog open={showReserveDialog} onOpenChange={setShowReserveDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2">
