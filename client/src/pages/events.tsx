@@ -20,6 +20,8 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventWithStats | null>(null);
   const [newEvent, setNewEvent] = useState({
     name: "",
     location: "",
@@ -60,6 +62,28 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     },
   });
 
+  const editEventMutation = useMutation({
+    mutationFn: async ({ eventId, eventData }: { eventId: number; eventData: any }) => {
+      await apiRequest("PUT", `/api/events/${eventId}`, eventData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      setShowEditDialog(false);
+      setEditingEvent(null);
+      toast({
+        title: "Успешно",
+        description: "Мероприятие обновлено",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить мероприятие",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
       await apiRequest("DELETE", `/api/events/${eventId}`);
@@ -91,7 +115,36 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newEvent.name || !newEvent.location || !newEvent.datetime) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните все поля",
+        variant: "destructive",
+      });
+      return;
+    }
     createEventMutation.mutate(newEvent);
+  };
+
+  const handleEditEvent = (event: EventWithStats) => {
+    setEditingEvent(event);
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+    
+    editEventMutation.mutate({
+      eventId: editingEvent.id,
+      eventData: {
+        name: editingEvent.name,
+        location: editingEvent.location,
+        datetime: editingEvent.datetime,
+        chatId: editingEvent.chatId,
+        isActive: editingEvent.isActive,
+      },
+    });
   };
 
   const handleDeleteEvent = (eventId: number) => {
@@ -287,7 +340,12 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                         <Eye className="h-4 w-4" />
                         Участники
                       </Button>
-                      <Button variant="ghost" size="sm" className="gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => handleEditEvent(event)}
+                      >
                         <Edit className="h-4 w-4" />
                         Редактировать
                       </Button>
@@ -393,6 +451,89 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать мероприятие</DialogTitle>
+          </DialogHeader>
+          {editingEvent && (
+            <form onSubmit={handleUpdateEvent} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Название мероприятия</Label>
+                <Input
+                  id="edit-name"
+                  value={editingEvent.name}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, name: e.target.value })}
+                  placeholder="Введите название мероприятия"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-location">Место проведения</Label>
+                <Input
+                  id="edit-location"
+                  value={editingEvent.location}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                  placeholder="Введите место проведения"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-datetime">Дата и время</Label>
+                <Input
+                  id="edit-datetime"
+                  type="datetime-local"
+                  value={new Date(editingEvent.datetime).toISOString().slice(0, 16)}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, datetime: new Date(e.target.value) })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-chat">Telegram-чат</Label>
+                <select
+                  id="edit-chat"
+                  value={editingEvent.chatId}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, chatId: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                >
+                  {chats.map((chat: any) => (
+                    <option key={chat.id} value={chat.id}>
+                      {chat.title} (ID: {chat.chatId})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-active"
+                  checked={editingEvent.isActive}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, isActive: e.target.checked })}
+                />
+                <Label htmlFor="edit-active">Мероприятие активно</Label>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => setShowEditDialog(false)}
+                >
+                  Отмена
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={editEventMutation.isPending}
+                >
+                  {editEventMutation.isPending ? "Сохранение..." : "Сохранить"}
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
