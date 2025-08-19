@@ -119,6 +119,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     const telegramId = query.from.id.toString();
     const data = query.data;
 
+    console.log(`Received callback query: ${data} from user ${telegramId}`);
+
     if (!chatId || !data) return;
 
     try {
@@ -184,18 +186,26 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const transportType = data.replace('transport_', '') as 'monowheel' | 'scooter' | 'spectator';
         const state = userStates.get(telegramId);
         
-        if (state?.step === 'transport_type' && state.eventId) {
-          // Update existing user
-          const user = await storage.getUserByTelegramId(telegramId);
-          if (user) {
-            await storage.updateUser(user.id, { transportType });
-            bot.sendMessage(
-              chatId,
-              `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
-            );
-          }
-        } else if (state?.eventId && state.fullName && state.phone) {
-          // Complete new registration
+        console.log(`Transport selection: ${transportType}, user state:`, state);
+        
+        if (!state) {
+          console.log(`No state found for user ${telegramId}`);
+          return;
+        }
+
+        // Check if this is updating an existing user
+        const existingUser = await storage.getUserByTelegramId(telegramId);
+        if (existingUser && state.step === 'transport_type') {
+          await storage.updateUser(existingUser.id, { transportType });
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+          );
+        }
+
+        // Complete new registration if all data is available
+        if (state.eventId && state.fullName && state.phone && state.step === 'transport_type') {
           const userData: InsertUser = {
             telegramId,
             telegramNickname: state.telegramNickname || null,
@@ -209,7 +219,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const user = await storage.createUser(userData);
           const event = await storage.getEvent(state.eventId);
 
-          bot.sendMessage(
+          userStates.delete(telegramId);
+          return bot.sendMessage(
             chatId,
             `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
             `📋 Ваши данные:\n` +
@@ -221,8 +232,6 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
           );
         }
-
-        userStates.delete(telegramId);
       }
     } catch (error) {
       console.error('Callback query error:', error);
