@@ -85,7 +85,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           statusMessage += "\n";
         }
 
-        const keyboard = [];
+        const keyboard: any[] = [];
         
         // Add buttons for events user can register for
         unregisteredEvents.forEach(event => {
@@ -387,7 +387,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         userStates.set(telegramId, {
           step: 'edit_full_name',
           eventId,
-          telegramNickname,
+          telegramNickname: query.from?.username || undefined,
         });
         
         return bot.sendMessage(chatId, "Введите новые ФИО:");
@@ -398,7 +398,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         userStates.set(telegramId, {
           step: 'edit_phone',
           eventId,
-          telegramNickname,
+          telegramNickname: query.from?.username || undefined,
         });
         
         return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7 (XXX) XXX-XX-XX:");
@@ -409,7 +409,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         userStates.set(telegramId, {
           step: 'edit_transport_type',
           eventId,
-          telegramNickname,
+          telegramNickname: query.from?.username || undefined,
         });
         
         return bot.sendMessage(
@@ -541,6 +541,24 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Complete new registration for spectator
         if (state.eventId && state.fullName && state.phone && state.step === 'transport_type') {
+          // Check if user is already registered for this event
+          const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+          
+          if (existingUserForEvent) {
+            // Update existing registration instead of creating new one
+            await storage.updateUser(existingUserForEvent.id, { 
+              transportType,
+              transportModel: null 
+            });
+            userStates.delete(telegramId);
+            return bot.sendMessage(
+              chatId,
+              `Ваша регистрация обновлена!\n\n` +
+              `🚗 Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+            );
+          }
+
           const userData: InsertUser = {
             telegramId,
             telegramNickname: state.telegramNickname || null,
@@ -659,6 +677,24 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Complete new registration
         if (state.eventId && state.fullName && state.phone && state.transportType) {
+          // Check if user is already registered for this event
+          const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+          const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+          
+          if (existingUserForEvent) {
+            // Update existing registration instead of creating new one
+            await storage.updateUser(existingUserForEvent.id, { 
+              transportType: state.transportType!,
+              transportModel: text 
+            });
+            userStates.delete(telegramId);
+            return bot.sendMessage(
+              chatId,
+              `Ваша регистрация обновлена!\n\n` +
+              `🚗 Тип транспорта изменён на: ${getTransportTypeLabel(state.transportType!)} (${text})`
+            );
+          }
+
           const userData: InsertUser = {
             telegramId,
             telegramNickname: state.telegramNickname || null,
