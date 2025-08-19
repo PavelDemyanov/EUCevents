@@ -22,6 +22,7 @@ interface Column<T> {
   key: keyof T;
   header: string;
   sortable?: boolean;
+  editable?: boolean;
   render?: (value: any, row: T) => React.ReactNode;
 }
 
@@ -36,6 +37,7 @@ interface DataTableProps<T> {
     options: { value: string; label: string }[];
   }[];
   pageSize?: number;
+  onCellEdit?: (rowId: any, column: keyof T, value: any) => void;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -45,6 +47,7 @@ export function DataTable<T extends Record<string, any>>({
   searchKey,
   filters = [],
   pageSize = 10,
+  onCellEdit,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -53,6 +56,11 @@ export function DataTable<T extends Record<string, any>>({
   } | null>(null);
   const [filterValues, setFilterValues] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingCell, setEditingCell] = useState<{
+    rowIndex: number;
+    column: keyof T;
+  } | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   // Apply search filter
   const filteredData = data.filter((item) => {
@@ -117,6 +125,19 @@ export function DataTable<T extends Record<string, any>>({
     setCurrentPage(1);
   };
 
+  const handleCellClick = (rowIndex: number, column: keyof T, currentValue: any) => {
+    setEditingCell({ rowIndex, column });
+    setEditValue(String(currentValue || ""));
+  };
+
+  const handleSaveEdit = (row: T, column: keyof T) => {
+    if (onCellEdit && (row as any).id) {
+      onCellEdit((row as any).id, column, editValue);
+    }
+    setEditingCell(null);
+    setEditValue("");
+  };
+
   return (
     <div className="space-y-4">
       {/* Search and Filters */}
@@ -179,9 +200,36 @@ export function DataTable<T extends Record<string, any>>({
               <TableRow key={index}>
                 {columns.map((column) => (
                   <TableCell key={String(column.key)}>
-                    {column.render
-                      ? column.render(row[column.key], row)
-                      : String(row[column.key] || "")}
+                    {column.editable && 
+                     editingCell?.rowIndex === index && 
+                     editingCell?.column === column.key ? (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveEdit(row, column.key);
+                            }
+                            if (e.key === 'Escape') {
+                              setEditingCell(null);
+                            }
+                          }}
+                          onBlur={() => handleSaveEdit(row, column.key)}
+                          autoFocus
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <div 
+                        className={column.editable ? "cursor-pointer hover:bg-gray-50 p-1 rounded" : ""}
+                        onClick={() => column.editable && handleCellClick(index, column.key, row[column.key])}
+                      >
+                        {column.render
+                          ? column.render(row[column.key], row)
+                          : String(row[column.key] || "")}
+                      </div>
+                    )}
                   </TableCell>
                 ))}
               </TableRow>

@@ -253,14 +253,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bots).orderBy(bots.name);
   }
 
-  async createBot(botData: InsertBot): Promise<Bot> {
-    const [bot] = await db.insert(bots).values(botData).returning();
-    return bot;
-  }
 
-  async deleteBot(id: number): Promise<void> {
-    await db.delete(bots).where(eq(bots.id, id));
-  }
 
   async getBot(id: number): Promise<Bot | undefined> {
     const [bot] = await db.select().from(bots).where(eq(bots.id, id));
@@ -290,19 +283,20 @@ export class DatabaseStorage implements IStorage {
     await db.delete(bots).where(eq(bots.id, id));
   }
 
+  async activateBot(id: number): Promise<void> {
+    await db.update(bots).set({ isActive: true }).where(eq(bots.id, id));
+  }
+
+  async deactivateBot(id: number): Promise<void> {
+    await db.update(bots).set({ isActive: false }).where(eq(bots.id, id));
+  }
+
   // Chat operations
   async getChats(): Promise<Chat[]> {
     return await db.select().from(chats).orderBy(chats.title);
   }
 
-  async createChat(chatData: InsertChat): Promise<Chat> {
-    const [chat] = await db.insert(chats).values(chatData).returning();
-    return chat;
-  }
 
-  async deleteChat(id: number): Promise<void> {
-    await db.delete(chats).where(eq(chats.id, id));
-  }
 
   async getChat(id: number): Promise<Chat | undefined> {
     const [chat] = await db.select().from(chats).where(eq(chats.id, id));
@@ -326,6 +320,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chats.id, id))
       .returning();
     return updatedChat;
+  }
+
+  async deleteChat(id: number): Promise<void> {
+    await db.delete(chats).where(eq(chats.id, id));
   }
 
   // Reserved numbers operations

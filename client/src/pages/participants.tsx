@@ -36,19 +36,6 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     queryKey: ["/api/events", eventId, "reserved-numbers"],
   });
 
-  const updateParticipantMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
-      await apiRequest("PUT", `/api/participants/${id}`, updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "participants"] });
-      toast({
-        title: "Успешно",
-        description: "Участник обновлен",
-      });
-    },
-  });
-
   const addReservedNumbersMutation = useMutation({
     mutationFn: async (numbers: number[]) => {
       await apiRequest("POST", `/api/events/${eventId}/reserved-numbers`, { numbers });
@@ -104,6 +91,40 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       });
     },
   });
+
+  const updateParticipantMutation = useMutation({
+    mutationFn: async ({ participantId, field, value }: {
+      participantId: number;
+      field: string;
+      value: any;
+    }) => {
+      await apiRequest("PUT", `/api/participants/${participantId}`, {
+        [field]: value
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}/participants`] });
+      toast({
+        title: "Успешно",
+        description: "Данные участника обновлены",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить данные участника",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCellEdit = (participantId: number, field: string, value: any) => {
+    updateParticipantMutation.mutate({
+      participantId,
+      field,
+      value
+    });
+  };
 
   const handleReserveNumbers = () => {
     const numbersArray = reservedNumbersText
@@ -202,18 +223,22 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       key: 'transportType' as keyof UserWithEvent,
       header: 'Тип транспорта',
       sortable: true,
-      render: (value: string, participant: UserWithEvent) => {
-        const model = participant.transportModel;
-        const label = model 
-          ? `${getTransportTypeLabel(value)} (${model})`
-          : getTransportTypeLabel(value);
-        
-        return (
-          <Badge className={`transport-badge-${value}`}>
-            {getTransportIcon(value)} {label}
-          </Badge>
-        );
-      },
+      render: (value: string) => (
+        <Badge className={`transport-badge-${value}`}>
+          {getTransportIcon(value)} {getTransportTypeLabel(value)}
+        </Badge>
+      ),
+    },
+    {
+      key: 'transportModel' as keyof UserWithEvent,
+      header: 'Модель',
+      sortable: true,
+      editable: true,
+      render: (value: string | null) => (
+        <span className="text-sm">
+          {value || '—'}
+        </span>
+      ),
     },
     {
       key: 'isActive' as keyof UserWithEvent,
@@ -374,6 +399,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
             columns={columns}
             searchPlaceholder="Поиск по ФИО, нику или телефону..."
             searchKey="fullName"
+            onCellEdit={handleCellEdit}
             filters={[
               {
                 key: 'transportType',

@@ -144,6 +144,14 @@ export const insertBotSchema = createInsertSchema(bots, {
   createdAt: true,
 });
 
+export const insertChatSchema = createInsertSchema(chats, {
+  chatId: z.string().min(1, "ID чата обязателен"),
+  title: z.string().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertReservedNumberSchema = createInsertSchema(reservedNumbers, {
   number: z.number().min(1).max(99, "Номер должен быть от 1 до 99"),
 }).omit({
@@ -164,6 +172,7 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Bot = typeof bots.$inferSelect;
 export type InsertBot = z.infer<typeof insertBotSchema>;
 export type Chat = typeof chats.$inferSelect;
+export type InsertChat = z.infer<typeof insertChatSchema>;
 export type ReservedNumber = typeof reservedNumbers.$inferSelect;
 export type InsertReservedNumber = z.infer<typeof insertReservedNumberSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
