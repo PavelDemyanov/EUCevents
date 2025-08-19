@@ -65,7 +65,13 @@ function Dashboard() {
               Участники
             </button>
           )}
-          <button className="sidebar-link w-full text-left">
+          <button 
+            className="sidebar-link w-full text-left"
+            onClick={() => {
+              // Пока что просто показываем уведомление
+              alert("Раздел настроек находится в разработке");
+            }}
+          >
             <Settings className="w-5 h-5 mr-3" />
             Настройки
           </button>
