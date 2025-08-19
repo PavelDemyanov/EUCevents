@@ -66,7 +66,7 @@ export function DataTable<T extends Record<string, any>>({
     // Apply other filters
     for (const filter of filters) {
       const filterValue = filterValues[String(filter.key)];
-      if (filterValue && filterValue !== "") {
+      if (filterValue && filterValue !== "" && filterValue !== "all") {
         if (String(item[filter.key]) !== filterValue) {
           return false;
         }
@@ -142,7 +142,7 @@ export function DataTable<T extends Record<string, any>>({
               <SelectValue placeholder={filter.label} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Все</SelectItem>
+              <SelectItem value="all">Все</SelectItem>
               {filter.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}

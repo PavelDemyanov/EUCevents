@@ -1,10 +1,23 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
 import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, adminLoginSchema } from "@shared/schema";
-import { startTelegramBot } from "./telegram-bot";
-import { generateParticipantsPDF } from "./pdf-generator";
+// Import Telegram bot and PDF generator only if files exist
+let startTelegramBot: any = null;
+let generateParticipantsPDF: any = null;
+try {
+  const telegramBot = await import("./telegram-bot");
+  startTelegramBot = telegramBot.startTelegramBot;
+} catch (e) {
+  console.warn("Telegram bot module not found");
+}
+try {
+  const pdfGenerator = await import("./pdf-generator");
+  generateParticipantsPDF = pdfGenerator.generateParticipantsPDF;
+} catch (e) {
+  console.warn("PDF generator module not found");
+}
 
 // Session middleware
 const sessionMiddleware = session({
@@ -12,7 +25,7 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: false, // Set to false for development
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   },
@@ -27,6 +40,8 @@ function requireAuth(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add JSON middleware first
+  app.use(express.json());
   app.use(sessionMiddleware);
 
   // Initialize default admin if doesn't exist
@@ -40,14 +55,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Ошибка создания администратора:", error);
   }
 
-  // Start Telegram bots
-  try {
-    const bots = await storage.getBots();
-    for (const bot of bots.filter(b => b.isActive)) {
-      await startTelegramBot(bot.token, storage);
+  // Start Telegram bots (if module is available)
+  if (startTelegramBot) {
+    try {
+      const bots = await storage.getBots();
+      for (const bot of bots.filter(b => b.isActive)) {
+        await startTelegramBot(bot.token, storage);
+      }
+    } catch (error) {
+      console.error("Ошибка запуска Telegram ботов:", error);
     }
-  } catch (error) {
-    console.error("Ошибка запуска Telegram ботов:", error);
   }
 
   // Auth routes
@@ -219,6 +236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Мероприятие не найдено" });
       }
 
+      if (!generateParticipantsPDF) {
+        return res.status(500).json({ message: "PDF генератор недоступен" });
+      }
       const pdfBuffer = await generateParticipantsPDF(event, participants);
       
       res.setHeader('Content-Type', 'application/pdf');
@@ -244,8 +264,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const botData = insertBotSchema.parse(req.body);
       const bot = await storage.createBot(botData);
       
-      // Start the bot
-      if (bot.isActive) {
+      // Start the bot (if module is available)
+      if (bot.isActive && startTelegramBot) {
         await startTelegramBot(bot.token, storage);
       }
       

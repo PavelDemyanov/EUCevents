@@ -140,14 +140,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.eventId, eventId));
 
     // Get reserved numbers
-    const reservedNumbers = await db
+    const reservedNumbersResult = await db
       .select({ number: reservedNumbers.number })
       .from(reservedNumbers)
       .where(eq(reservedNumbers.eventId, eventId));
 
     const usedNumbers = new Set([
       ...existingNumbers.map(u => u.participantNumber).filter(n => n !== null),
-      ...reservedNumbers.map(r => r.number),
+      ...reservedNumbersResult.map((r: { number: number }) => r.number),
     ]);
 
     // Find first available number from 1 to 99

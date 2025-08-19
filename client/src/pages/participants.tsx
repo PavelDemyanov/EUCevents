@@ -210,7 +210,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               <CardTitle>Участники мероприятия</CardTitle>
               {event && (
                 <p className="text-sm text-gray-600 mt-1">
-                  {event.name} • {event.location} • {formatDateTime(event.datetime.toString())}
+                  {(event as any).name} • {(event as any).location} • {formatDateTime((event as any).datetime.toString())}
                 </p>
               )}
             </div>

@@ -44,7 +44,7 @@ export default function Events() {
   const filteredEvents = (events as EventWithStats[]).filter((event) => {
     const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          event.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || 
+    const matchesStatus = !statusFilter || statusFilter === "all" ||
                          (statusFilter === "active" && event.isActive) ||
                          (statusFilter === "inactive" && !event.isActive);
     return matchesSearch && matchesStatus;
@@ -81,8 +81,9 @@ export default function Events() {
     );
   }
 
-  const totalEvents = events.length;
-  const totalParticipants = events.reduce((sum: number, event: EventWithStats) => sum + event.participantCount, 0);
+  const eventsTyped = events as EventWithStats[];
+  const totalEvents = eventsTyped.length;
+  const totalParticipants = eventsTyped.reduce((sum: number, event: EventWithStats) => sum + event.participantCount, 0);
   const totalBots = 3; // Placeholder - should come from API
   const todayRegistrations = 15; // Placeholder - should come from API
 
@@ -169,7 +170,7 @@ export default function Events() {
                 <SelectValue placeholder="Все статусы" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Все статусы</SelectItem>
+                <SelectItem value="all">Все статусы</SelectItem>
                 <SelectItem value="active">Активные</SelectItem>
                 <SelectItem value="inactive">Завершенные</SelectItem>
               </SelectContent>
