@@ -82,6 +82,26 @@ export default function Settings() {
     },
   });
 
+  const toggleBotMutation = useMutation({
+    mutationFn: async ({ botId, action }: { botId: number, action: 'start' | 'stop' }) => {
+      await apiRequest("POST", `/api/bots/${botId}/${action}`);
+    },
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
+      toast({
+        title: "Успешно",
+        description: action === 'start' ? "Бот запущен" : "Бот остановлен",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось изменить статус бота",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Мутации для чатов
   const createChatMutation = useMutation({
     mutationFn: async (chatData: typeof newChat) => {
@@ -142,6 +162,11 @@ export default function Settings() {
     if (confirm("Вы уверены, что хотите удалить этого бота?")) {
       deleteBotMutation.mutate(botId);
     }
+  };
+
+  const handleToggleBot = (botId: number, isActive: boolean) => {
+    const action = isActive ? 'stop' : 'start';
+    toggleBotMutation.mutate({ botId, action });
   };
 
   const handleDeleteChat = (chatId: number) => {
@@ -210,6 +235,14 @@ export default function Settings() {
                     <Badge variant={bot.isActive ? "default" : "secondary"}>
                       {bot.isActive ? "Активен" : "Отключен"}
                     </Badge>
+                    <Button
+                      variant={bot.isActive ? "destructive" : "default"}
+                      size="sm"
+                      onClick={() => handleToggleBot(bot.id, bot.isActive)}
+                      disabled={toggleBotMutation.isPending}
+                    >
+                      {bot.isActive ? "Остановить" : "Запустить"}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"

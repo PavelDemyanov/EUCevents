@@ -188,6 +188,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/bots/:botId/start", requireAuth, async (req, res) => {
+    try {
+      const botId = parseInt(req.params.botId);
+      const bot = await storage.getBot(botId);
+      
+      if (!bot) {
+        return res.status(404).json({ message: "Бот не найден" });
+      }
+
+      if (startTelegramBot) {
+        await startTelegramBot(bot.token, storage);
+      }
+      
+      await storage.activateBot(botId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error starting bot:", error);
+      res.status(500).json({ message: "Не удалось запустить бота" });
+    }
+  });
+
+  app.post("/api/bots/:botId/stop", requireAuth, async (req, res) => {
+    try {
+      const botId = parseInt(req.params.botId);
+      await storage.deactivateBot(botId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error stopping bot:", error);
+      res.status(500).json({ message: "Не удалось остановить бота" });
+    }
+  });
+
   // Chats management  
   app.get("/api/chats", requireAuth, async (req, res) => {
     try {
