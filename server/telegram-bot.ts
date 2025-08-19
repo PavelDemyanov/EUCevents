@@ -39,35 +39,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     }
 
     try {
-      // Check if user is already registered
-      const existingUser = await storage.getUserByTelegramId(telegramId);
-      if (existingUser && existingUser.isActive) {
-        const event = await storage.getEvent(existingUser.eventId);
-        const transportInfo = existingUser.transportModel 
-          ? `${getTransportTypeLabel(existingUser.transportType)} (${existingUser.transportModel})`
-          : getTransportTypeLabel(existingUser.transportType);
-
-        return bot.sendMessage(
-          chatId,
-          `Вы уже зарегистрированы на мероприятие "${event?.name}"!\n\n` +
-          `📋 Ваши данные:\n` +
-          `👤 ФИО: ${existingUser.fullName}\n` +
-          `📱 Телефон: ${existingUser.phone}\n` +
-          `🚗 Транспорт: ${transportInfo}\n` +
-          `🏷️ Номер участника: ${existingUser.participantNumber}\n\n` +
-          `Чтобы изменить тип транспорта или отказаться от участия, выберите действие:`,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Изменить тип транспорта", callback_data: "change_transport" }],
-                [{ text: "Отказаться от участия", callback_data: "cancel_participation" }],
-              ],
-            },
-          }
-        );
-      }
-
-      // Get all active events (not limited by chat)
+      // Get all active events and user registrations
       const activeEvents = await storage.getActiveEvents();
       if (activeEvents.length === 0) {
         return bot.sendMessage(
@@ -76,6 +48,66 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
       }
 
+      // Check user's registrations for all active events
+      const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+      const activeRegistrations = existingRegistrations.filter(reg => 
+        reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+      );
+
+      if (activeRegistrations.length > 0) {
+        // User has active registrations, show status and options
+        let statusMessage = "📋 Ваши текущие регистрации:\n\n";
+        
+        for (const registration of activeRegistrations) {
+          const event = await storage.getEvent(registration.eventId);
+          const transportInfo = registration.transportModel 
+            ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
+            : getTransportTypeLabel(registration.transportType);
+          
+          statusMessage += `🎯 **${event?.name}**\n` +
+            `📍 ${event?.location}\n` +
+            `🕐 ${formatDateTime(event?.datetime!)}\n` +
+            `🚗 Транспорт: ${transportInfo}\n` +
+            `🏷️ Номер: ${registration.participantNumber}\n\n`;
+        }
+
+        // Check if there are events user is not registered for
+        const unregisteredEvents = activeEvents.filter(event => 
+          !activeRegistrations.some(reg => reg.eventId === event.id)
+        );
+
+        if (unregisteredEvents.length > 0) {
+          statusMessage += "📝 Доступны для регистрации:\n";
+          unregisteredEvents.forEach(event => {
+            statusMessage += `• ${event.name} (${formatDateTime(event.datetime)})\n`;
+          });
+          statusMessage += "\n";
+        }
+
+        const keyboard = [];
+        
+        // Add buttons for events user can register for
+        unregisteredEvents.forEach(event => {
+          keyboard.push([{
+            text: `➕ Регистрация на "${event.name}"`,
+            callback_data: `select_event_${event.id}`
+          }]);
+        });
+
+        // Add management buttons for existing registrations
+        if (activeRegistrations.length === 1) {
+          keyboard.push([{ text: "✏️ Изменить тип транспорта", callback_data: "change_transport" }]);
+          keyboard.push([{ text: "❌ Отказаться от участия", callback_data: "cancel_participation" }]);
+        }
+
+        return bot.sendMessage(chatId, statusMessage, {
+          reply_markup: { inline_keyboard: keyboard },
+          parse_mode: 'Markdown'
+        });
+      }
+
+      // If no active registrations, show event selection
+      
       // Initialize registration state
       userStates.set(telegramId, {
         step: 'event_selection',
