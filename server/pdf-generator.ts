@@ -136,12 +136,16 @@ function getTransportTypeLabel(type: string): string {
   }
 }
 
-function formatDateTime(date: Date): string {
+function formatDateTime(date: Date | string): string {
+  if (!date) return 'Не указано';
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return 'Неверная дата';
+  
   return new Intl.DateTimeFormat('ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(date));
+  }).format(dateObj);
 }

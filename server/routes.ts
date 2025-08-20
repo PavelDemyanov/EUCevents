@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
-import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, adminLoginSchema } from "@shared/schema";
+import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertFixedNumberBindingSchema, adminLoginSchema } from "@shared/schema";
 // Import Telegram bot and PDF generator only if files exist
 let startTelegramBot: any = null;
 let generateParticipantsPDF: any = null;
@@ -398,6 +398,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending notification:", error);
       res.status(500).json({ message: "Не удалось отправить уведомление" });
+    }
+  });
+
+  // Fixed number bindings routes
+  app.get("/api/fixed-bindings", requireAuth, async (req, res) => {
+    try {
+      const bindings = await storage.getFixedNumberBindings();
+      res.json(bindings);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка получения привязок номеров" });
+    }
+  });
+
+  app.post("/api/fixed-bindings", requireAuth, async (req, res) => {
+    try {
+      const bindingData = insertFixedNumberBindingSchema.parse(req.body);
+      const binding = await storage.createFixedNumberBinding(bindingData);
+      res.json(binding);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Ошибка создания привязки номера" });
+    }
+  });
+
+  app.delete("/api/fixed-bindings/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteFixedNumberBinding(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка удаления привязки номера" });
     }
   });
 

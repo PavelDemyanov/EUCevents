@@ -80,6 +80,14 @@ export const adminUsers = pgTable("admin_users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Fixed number bindings table for telegram nickname to participant number mapping
+export const fixedNumberBindings = pgTable("fixed_number_bindings", {
+  id: serial("id").primaryKey(),
+  telegramNickname: varchar("telegram_nickname", { length: 100 }).notNull().unique(),
+  participantNumber: integer("participant_number").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   event: one(events, {
@@ -115,6 +123,8 @@ export const reservedNumbersRelations = relations(reservedNumbers, ({ one }) => 
     references: [events.id],
   }),
 }));
+
+export const fixedNumberBindingsRelations = relations(fixedNumberBindings, ({ }) => ({}));
 
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
@@ -163,6 +173,11 @@ export const insertReservedNumberSchema = createInsertSchema(reservedNumbers, {
   createdAt: true,
 });
 
+export const insertFixedNumberBindingSchema = createInsertSchema(fixedNumberBindings, {
+  telegramNickname: z.string().min(1, "Telegram-ник обязателен"),
+  participantNumber: z.number().min(1, "Номер участника должен быть больше 0"),
+}).omit({ id: true, createdAt: true });
+
 export const adminLoginSchema = z.object({
   username: z.string().min(2, "Логин обязателен"),
   password: z.string().min(4, "Пароль должен содержать минимум 4 символа"),
@@ -179,6 +194,8 @@ export type Chat = typeof chats.$inferSelect;
 export type InsertChat = z.infer<typeof insertChatSchema>;
 export type ReservedNumber = typeof reservedNumbers.$inferSelect;
 export type InsertReservedNumber = z.infer<typeof insertReservedNumberSchema>;
+export type FixedNumberBinding = typeof fixedNumberBindings.$inferSelect;
+export type InsertFixedNumberBinding = z.infer<typeof insertFixedNumberBindingSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type AdminLogin = z.infer<typeof adminLoginSchema>;
 

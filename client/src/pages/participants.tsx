@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Lock, FileText, Download, Bell } from "lucide-react";
-import type { UserWithEvent, ReservedNumber } from "@shared/schema";
+import { ArrowLeft, FileText, Download, Bell } from "lucide-react";
+import type { UserWithEvent } from "@shared/schema";
 
 interface ParticipantsProps {
   eventId: number;
@@ -18,9 +18,6 @@ interface ParticipantsProps {
 }
 
 export default function Participants({ eventId, onBack }: ParticipantsProps) {
-  const [reservedNumbersText, setReservedNumbersText] = useState("");
-  const [showReserveDialog, setShowReserveDialog] = useState(false);
-  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -30,25 +27,6 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   const { data: event } = useQuery({
     queryKey: ["/api/events", eventId],
-  });
-
-  const { data: reservedNumbers = [] } = useQuery({
-    queryKey: ["/api/events", eventId, "reserved-numbers"],
-  });
-
-  const addReservedNumbersMutation = useMutation({
-    mutationFn: async (numbers: number[]) => {
-      await apiRequest("POST", `/api/events/${eventId}/reserved-numbers`, { numbers });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "reserved-numbers"] });
-      setShowReserveDialog(false);
-      setReservedNumbersText("");
-      toast({
-        title: "Успешно",
-        description: "Номера зарезервированы",
-      });
-    },
   });
 
   const generatePdfMutation = useMutation({
@@ -128,23 +106,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     });
   };
 
-  const handleReserveNumbers = () => {
-    const numbersArray = reservedNumbersText
-      .split(",")
-      .map(n => parseInt(n.trim()))
-      .filter(n => !isNaN(n) && n >= 1 && n <= 99);
 
-    if (numbersArray.length === 0) {
-      toast({
-        title: "Ошибка",
-        description: "Введите корректные номера от 1 до 99",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    addReservedNumbersMutation.mutate(numbersArray);
-  };
 
   const getTransportTypeLabel = (type: string) => {
     switch (type) {
@@ -301,58 +263,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                 <Bell className="h-4 w-4" />
                 Оповестить группу
               </Button>
-              <Dialog open={showReserveDialog} onOpenChange={setShowReserveDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 text-xs lg:text-sm whitespace-nowrap">
-                    <Lock className="h-4 w-4" />
-                    Зарезервировать
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Зарезервировать номера</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Номера для резервирования (от 1 до 99, через запятую)</Label>
-                      <Textarea
-                        placeholder="Например: 1, 5, 10, 15, 99"
-                        value={reservedNumbersText}
-                        onChange={(e) => setReservedNumbersText(e.target.value)}
-                        className="mt-2"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Зарезервированные номера не будут автоматически назначаться участникам
-                      </p>
-                    </div>
-                    
-                    {(reservedNumbers as any)?.length > 0 && (
-                      <div>
-                        <Label>Текущие зарезервированные номера:</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {(reservedNumbers as ReservedNumber[]).map((rn: any) => (
-                            <Badge key={rn.id} variant="outline">
-                              {rn.number}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setShowReserveDialog(false)}>
-                        Отмена
-                      </Button>
-                      <Button 
-                        onClick={handleReserveNumbers}
-                        disabled={addReservedNumbersMutation.isPending}
-                      >
-                        Сохранить
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+
               
               <Button 
                 variant="outline" 

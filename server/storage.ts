@@ -4,6 +4,7 @@ import {
   bots,
   chats,
   reservedNumbers,
+  fixedNumberBindings,
   adminUsers,
   type User,
   type InsertUser,
@@ -15,6 +16,8 @@ import {
   type InsertChat,
   type ReservedNumber,
   type InsertReservedNumber,
+  type FixedNumberBinding,
+  type InsertFixedNumberBinding,
   type AdminUser,
   type EventWithStats,
   type UserWithEvent,
@@ -66,6 +69,12 @@ export interface IStorage {
   addReservedNumbers(eventId: number, numbers: number[]): Promise<void>;
   removeReservedNumbers(eventId: number, numbers: number[]): Promise<void>;
 
+  // Fixed number bindings operations
+  getFixedNumberBindings(): Promise<FixedNumberBinding[]>;
+  createFixedNumberBinding(binding: InsertFixedNumberBinding): Promise<FixedNumberBinding>;
+  deleteFixedNumberBinding(id: number): Promise<void>;
+  getFixedNumberByTelegramNickname(nickname: string): Promise<FixedNumberBinding | undefined>;
+
   // Admin operations
   getAdminByUsername(username: string): Promise<AdminUser | undefined>;
   validateAdminPassword(username: string, password: string): Promise<boolean>;
@@ -93,8 +102,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    // Get available participant number
-    const participantNumber = await this.getAvailableParticipantNumber(user.eventId);
+    // Get available participant number with fixed binding support
+    const participantNumber = await this.getAvailableParticipantNumber(user.eventId, user.telegramNickname);
     
     const [createdUser] = await db
       .insert(users)
@@ -146,7 +155,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id));
   }
 
-  async getAvailableParticipantNumber(eventId: number): Promise<number> {
+  async getAvailableParticipantNumber(eventId: number, telegramNickname?: string | null): Promise<number> {
+    // Check if user has a fixed number binding
+    if (telegramNickname) {
+      const fixedBinding = await this.getFixedNumberByTelegramNickname(telegramNickname);
+      if (fixedBinding) {
+        // Check if this number is already taken by someone else for this event
+        const existingUser = await db
+          .select()
+          .from(users)
+          .where(
+            and(
+              eq(users.eventId, eventId),
+              eq(users.participantNumber, fixedBinding.participantNumber),
+              eq(users.isActive, true)
+            )
+          );
+        
+        if (existingUser.length === 0) {
+          return fixedBinding.participantNumber;
+        }
+      }
+    }
+
     // Get existing participant numbers
     const existingNumbers = await db
       .select({ participantNumber: users.participantNumber })
@@ -159,9 +190,13 @@ export class DatabaseStorage implements IStorage {
       .from(reservedNumbers)
       .where(eq(reservedNumbers.eventId, eventId));
 
+    // Get all fixed bindings (these numbers should be avoided for dynamic assignment)
+    const fixedBindingsData = await this.getFixedNumberBindings();
+
     const usedNumbers = new Set([
       ...existingNumbers.map(u => u.participantNumber).filter(n => n !== null),
       ...reservedNumbersResult.map((r: { number: number }) => r.number),
+      ...fixedBindingsData.map(b => b.participantNumber) // Reserve fixed numbers
     ]);
 
     // Find first available number from 1 to 99
@@ -363,6 +398,31 @@ export class DatabaseStorage implements IStorage {
           inArray(reservedNumbers.number, numbers)
         )
       );
+  }
+
+  // Fixed number bindings operations
+  async getFixedNumberBindings(): Promise<FixedNumberBinding[]> {
+    return await db.select().from(fixedNumberBindings);
+  }
+
+  async createFixedNumberBinding(binding: InsertFixedNumberBinding): Promise<FixedNumberBinding> {
+    const [created] = await db
+      .insert(fixedNumberBindings)
+      .values(binding)
+      .returning();
+    return created;
+  }
+
+  async deleteFixedNumberBinding(id: number): Promise<void> {
+    await db.delete(fixedNumberBindings).where(eq(fixedNumberBindings.id, id));
+  }
+
+  async getFixedNumberByTelegramNickname(nickname: string): Promise<FixedNumberBinding | undefined> {
+    const [binding] = await db
+      .select()
+      .from(fixedNumberBindings)
+      .where(eq(fixedNumberBindings.telegramNickname, nickname));
+    return binding;
   }
 
   // Admin operations
