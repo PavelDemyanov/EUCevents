@@ -122,12 +122,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+    // Get the user to check their current details
+    const [existingUser] = await db.select().from(users).where(eq(users.id, id));
+    
+    let finalUpdates = { ...updates, updatedAt: new Date() };
+    
+    // If reactivating user (isActive: true) or telegramNickname is being updated, 
+    // check for fixed number assignment
+    if ((updates.isActive === true || updates.telegramNickname) && existingUser) {
+      const telegramNickname = updates.telegramNickname || existingUser.telegramNickname;
+      if (telegramNickname) {
+        const fixedBinding = await this.getFixedNumberByTelegramNickname(telegramNickname);
+        if (fixedBinding) {
+          // Check if this number is available for this event
+          const existingUserWithNumber = await db
+            .select()
+            .from(users)
+            .where(
+              and(
+                eq(users.eventId, existingUser.eventId),
+                eq(users.participantNumber, fixedBinding.participantNumber),
+                eq(users.isActive, true),
+                ne(users.id, id) // Exclude current user
+              )
+            );
+          
+          if (existingUserWithNumber.length === 0) {
+            finalUpdates.participantNumber = fixedBinding.participantNumber;
+          }
+        }
+      }
+    }
+
     const [updatedUser] = await db
       .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
+      .set(finalUpdates)
       .where(eq(users.id, id))
       .returning();
     return updatedUser;
