@@ -349,6 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:eventId/pdf", requireAuth, async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
+      const { generateParticipantsPDF } = await import('./pdf-generator');
       const pdfBuffer = await generateParticipantsPDF(eventId, storage);
       
       res.setHeader('Content-Type', 'application/pdf');

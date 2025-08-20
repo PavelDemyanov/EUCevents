@@ -316,6 +316,22 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
+        // Check if user is already registered for this event
+        const existingRegistration = await storage.getUserRegistration(telegramId, state.eventId);
+        if (existingRegistration) {
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
+            `📋 Ваши данные:\n` +
+            `👤 ФИО: ${existingRegistration.fullName}\n` +
+            `📱 Телефон: ${existingRegistration.phone}\n` +
+            `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
+            `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
+            `Если хотите изменить данные, напишите мне снова.`
+          );
+        }
+
         // Check if we have transport data from previous registration
         if (state.existingData.transportType && state.existingData.transportType !== 'spectator') {
           // Complete registration with existing data including transport
