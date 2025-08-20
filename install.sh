@@ -99,7 +99,7 @@ server {
     server_name your-domain.com;  # Replace with your domain
 
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:1414;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
