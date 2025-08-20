@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
 import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertFixedNumberBindingSchema, adminLoginSchema } from "@shared/schema";
+import { setupManager } from "./setup";
 // Import Telegram bot and PDF generator only if files exist
 let startTelegramBot: any = null;
 let generateParticipantsPDF: any = null;
@@ -48,12 +49,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(express.json());
   app.use(sessionMiddleware);
 
-  // Initialize default admin if doesn't exist
+  // Setup routes - must come before auth check
+  app.get("/api/setup/status", async (req, res) => {
+    try {
+      const isComplete = await setupManager.isSetupComplete();
+      const status = await setupManager.getSetupStatus();
+      res.json({ isComplete, ...status });
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка проверки настройки" });
+    }
+  });
+
+  app.post("/api/setup/complete", async (req, res) => {
+    try {
+      const isComplete = await setupManager.isSetupComplete();
+      if (isComplete) {
+        return res.status(400).json({ message: "Настройка уже завершена" });
+      }
+
+      await setupManager.completeSetup(req.body);
+      res.json({ success: true, message: "Настройка завершена успешно" });
+    } catch (error) {
+      console.error("Setup error:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Ошибка настройки" });
+    }
+  });
+
+  // Initialize default admin if doesn't exist (fallback for existing installations)
   try {
-    const existingAdmin = await storage.getAdminByUsername("admin");
-    if (!existingAdmin) {
-      await storage.createAdmin("admin", "admin123");
-      console.log("Создан администратор по умолчанию: admin/admin123");
+    const isSetupComplete = await setupManager.isSetupComplete();
+    if (!isSetupComplete) {
+      const existingAdmin = await storage.getAdminByUsername("admin");
+      if (!existingAdmin) {
+        await storage.createAdmin("admin", "admin123");
+        console.log("Создан администратор по умолчанию: admin/admin123");
+      }
     }
   } catch (error) {
     console.error("Ошибка создания администратора:", error);
