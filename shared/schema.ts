@@ -87,8 +87,12 @@ export const adminUsers = pgTable("admin_users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 50 }).notNull().unique(),
   password: text("password").notNull(),
+  fullName: varchar("full_name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
   isActive: boolean("is_active").default(true).notNull(),
+  isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Fixed number bindings table for telegram nickname to participant number mapping
@@ -229,7 +233,22 @@ export type InsertReservedNumber = z.infer<typeof insertReservedNumberSchema>;
 export type FixedNumberBinding = typeof fixedNumberBindings.$inferSelect;
 export type InsertFixedNumberBinding = z.infer<typeof insertFixedNumberBindingSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = typeof adminUsers.$inferInsert;
 export type AdminLogin = z.infer<typeof adminLoginSchema>;
+
+// Admin user schema for validation
+export const insertAdminUserSchema = createInsertSchema(adminUsers, {
+  username: z.string().min(3, "Имя пользователя должно содержать минимум 3 символа").max(50),
+  password: z.string().min(6, "Пароль должен содержать минимум 6 символов").max(255),
+  fullName: z.string().min(1, "ФИО обязательно").max(255).optional(),
+  email: z.string().email("Неверный формат email").optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAdminUserWithValidation = z.infer<typeof insertAdminUserSchema>;
 
 // Event with related data type
 export type EventWithStats = Event & {

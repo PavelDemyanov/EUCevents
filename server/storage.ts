@@ -90,7 +90,13 @@ export interface IStorage {
   // Admin operations
   getAdminByUsername(username: string): Promise<AdminUser | undefined>;
   validateAdminPassword(username: string, password: string): Promise<boolean>;
-  createAdmin(username: string, password: string): Promise<AdminUser>;
+  createAdmin(adminData: InsertAdminUser): Promise<AdminUser>;
+
+  // Admin management operations
+  getAdmins(): Promise<AdminUser[]>;
+  getAdmin(id: number): Promise<AdminUser | undefined>;
+  updateAdmin(id: number, updates: Partial<InsertAdminUser>): Promise<AdminUser>;
+  deleteAdmin(id: number): Promise<void>;
 
   // Statistics operations
   getTodayParticipants(startDate: Date, endDate: Date): Promise<User[]>;
@@ -648,16 +654,58 @@ export class DatabaseStorage implements IStorage {
     return await bcrypt.compare(password, admin.password);
   }
 
-  async createAdmin(username: string, password: string): Promise<AdminUser> {
-    const hashedPassword = await bcrypt.hash(password, 10);
+  async createAdmin(adminData: InsertAdminUser): Promise<AdminUser> {
+    const hashedPassword = await bcrypt.hash(adminData.password, 10);
     const [admin] = await db
       .insert(adminUsers)
       .values({
-        username,
+        ...adminData,
         password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       })
       .returning();
     return admin;
+  }
+
+  // Admin management operations
+  async getAdmins(): Promise<AdminUser[]> {
+    return await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.isActive, true))
+      .orderBy(adminUsers.createdAt);
+  }
+
+  async getAdmin(id: number): Promise<AdminUser | undefined> {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.id, id));
+    return admin;
+  }
+
+  async updateAdmin(id: number, updates: Partial<InsertAdminUser>): Promise<AdminUser> {
+    let finalUpdates = { ...updates, updatedAt: new Date() };
+    
+    // Hash password if it's being updated
+    if (updates.password) {
+      finalUpdates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    const [admin] = await db
+      .update(adminUsers)
+      .set(finalUpdates)
+      .where(eq(adminUsers.id, id))
+      .returning();
+    return admin;
+  }
+
+  async deleteAdmin(id: number): Promise<void> {
+    await db
+      .update(adminUsers)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(adminUsers.id, id));
   }
 
   // Statistics operations

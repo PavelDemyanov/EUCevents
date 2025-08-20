@@ -588,5 +588,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  // Admin management routes
+  app.get('/api/admins', requireAuth, async (req, res) => {
+    try {
+      const admins = await storage.getAdmins();
+      // Don't return passwords
+      const safeAdmins = admins.map(admin => ({
+        ...admin,
+        password: undefined
+      }));
+      res.json(safeAdmins);
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      res.status(500).json({ message: "Не удалось загрузить список администраторов" });
+    }
+  });
+
+  app.post('/api/admins', requireAuth, async (req, res) => {
+    try {
+      const adminData = req.body;
+      const newAdmin = await storage.createAdmin(adminData);
+      // Don't return password
+      const { password, ...safeAdmin } = newAdmin;
+      res.status(201).json(safeAdmin);
+    } catch (error: any) {
+      console.error("Error creating admin:", error);
+      if (error.message?.includes('unique')) {
+        res.status(400).json({ message: "Администратор с таким именем пользователя уже существует" });
+      } else {
+        res.status(500).json({ message: "Не удалось создать администратора" });
+      }
+    }
+  });
+
+  app.put('/api/admins/:id', requireAuth, async (req, res) => {
+    try {
+      const adminId = parseInt(req.params.id);
+      const updateData = req.body;
+      const updatedAdmin = await storage.updateAdmin(adminId, updateData);
+      // Don't return password
+      const { password, ...safeAdmin } = updatedAdmin;
+      res.json(safeAdmin);
+    } catch (error: any) {
+      console.error("Error updating admin:", error);
+      if (error.message?.includes('unique')) {
+        res.status(400).json({ message: "Администратор с таким именем пользователя уже существует" });
+      } else {
+        res.status(500).json({ message: "Не удалось обновить данные администратора" });
+      }
+    }
+  });
+
+  app.delete('/api/admins/:id', requireAuth, async (req, res) => {
+    try {
+      const adminId = parseInt(req.params.id);
+      const currentUserId = (req.session as any).userId;
+      
+      // Prevent self-deletion
+      if (adminId === currentUserId) {
+        return res.status(400).json({ message: "Нельзя удалить собственную учётную запись" });
+      }
+      
+      await storage.deleteAdmin(adminId);
+      res.json({ message: "Администратор удалён" });
+    } catch (error) {
+      console.error("Error deleting admin:", error);
+      res.status(500).json({ message: "Не удалось удалить администратора" });
+    }
+  });
+
   return httpServer;
 }

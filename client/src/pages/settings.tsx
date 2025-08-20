@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,15 +8,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, Bot as BotIcon, MessageCircle, Hash } from "lucide-react";
-import type { Bot, Chat, FixedNumberBinding, InsertFixedNumberBinding } from "@shared/schema";
+import { Plus, Edit, Trash2, Bot as BotIcon, MessageCircle, Hash, Users, UserPlus } from "lucide-react";
+import type { Bot, Chat, FixedNumberBinding, InsertFixedNumberBinding, AdminUser, InsertAdminUserWithValidation } from "@shared/schema";
+import { insertAdminUserSchema } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Settings() {
   const [showBotDialog, setShowBotDialog] = useState(false);
   const [showChatDialog, setShowChatDialog] = useState(false);
   const [showBindingDialog, setShowBindingDialog] = useState(false);
+  const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [editingBot, setEditingBot] = useState<Bot | null>(null);
   const [editingChat, setEditingChat] = useState<Chat | null>(null);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [newBot, setNewBot] = useState({
     token: "",
     name: "",
@@ -51,6 +65,10 @@ export default function Settings() {
 
   const { data: telegramNicknames = [], isLoading: nicknamesLoading } = useQuery({
     queryKey: ["/api/telegram-nicknames"],
+  });
+
+  const { data: admins = [], isLoading: adminsLoading } = useQuery({
+    queryKey: ["/api/admins"],
   });
 
   // Мутации для ботов
@@ -242,6 +260,33 @@ export default function Settings() {
     }
   };
 
+  // Мутация для удаления администратора
+  const deleteAdminMutation = useMutation({
+    mutationFn: async (adminId: number) => {
+      await apiRequest("DELETE", `/api/admins/${adminId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
+      toast({
+        title: "Успешно",
+        description: "Администратор удалён",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить администратора",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteAdmin = (adminId: number) => {
+    if (confirm("Вы уверены, что хотите удалить этого администратора?")) {
+      deleteAdminMutation.mutate(adminId);
+    }
+  };
+
   if (botsLoading || chatsLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -281,7 +326,7 @@ export default function Settings() {
           </div>
         </CardHeader>
         <CardContent>
-          {bots.length === 0 ? (
+          {(bots as Bot[]).length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <BotIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <p>Telegram-боты не настроены</p>
@@ -655,6 +700,303 @@ export default function Settings() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Администраторы */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5" />
+              <CardTitle>Администраторы</CardTitle>
+            </div>
+            <Button 
+              onClick={() => {
+                setEditingAdmin(null);
+                setShowAdminDialog(true);
+              }}
+              size="sm"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Добавить администратора
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {adminsLoading ? (
+            <p className="text-gray-500">Загрузка администраторов...</p>
+          ) : (
+            <div className="space-y-2">
+              {(admins as AdminUser[]).map((admin: AdminUser) => (
+                <div
+                  key={admin.id}
+                  className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">@{admin.username}</span>
+                      {admin.isSuperAdmin && (
+                        <Badge variant="secondary">Супер-админ</Badge>
+                      )}
+                      {!admin.isActive && (
+                        <Badge variant="destructive">Отключен</Badge>
+                      )}
+                    </div>
+                    {admin.fullName && (
+                      <p className="text-sm text-gray-500">{admin.fullName}</p>
+                    )}
+                    {admin.email && (
+                      <p className="text-xs text-gray-400">{admin.email}</p>
+                    )}
+                    <p className="text-xs text-gray-400">
+                      Создан: {new Date(admin.createdAt!).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingAdmin(admin);
+                        setShowAdminDialog(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteAdmin(admin.id)}
+                      disabled={admin.isSuperAdmin}
+                      title={admin.isSuperAdmin ? "Нельзя удалить супер-администратора" : "Удалить администратора"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Admin Dialog */}
+      <AdminDialog
+        open={showAdminDialog}
+        onOpenChange={setShowAdminDialog}
+        admin={editingAdmin}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
+          setShowAdminDialog(false);
+          setEditingAdmin(null);
+        }}
+      />
     </div>
+  );
+}
+
+// Компонент диалога для администратора
+function AdminDialog({
+  open,
+  onOpenChange,
+  admin,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  admin: AdminUser | null;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const isEdit = !!admin;
+
+  const form = useForm<InsertAdminUserWithValidation>({
+    resolver: zodResolver(insertAdminUserSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      fullName: "",
+      email: "",
+      isActive: true,
+      isSuperAdmin: false,
+    },
+  });
+
+  // Reset form when admin changes
+  useEffect(() => {
+    if (admin) {
+      form.reset({
+        username: admin.username,
+        password: "", // Don't show existing password
+        fullName: admin.fullName || "",
+        email: admin.email || "",
+        isActive: admin.isActive,
+        isSuperAdmin: admin.isSuperAdmin,
+      });
+    } else {
+      form.reset({
+        username: "",
+        password: "",
+        fullName: "",
+        email: "",
+        isActive: true,
+        isSuperAdmin: false,
+      });
+    }
+  }, [admin, form]);
+
+  const createAdminMutation = useMutation({
+    mutationFn: async (adminData: InsertAdminUserWithValidation) => {
+      if (isEdit && admin) {
+        await apiRequest("PUT", `/api/admins/${admin.id}`, adminData);
+      } else {
+        await apiRequest("POST", "/api/admins", adminData);
+      }
+    },
+    onSuccess: () => {
+      onSuccess();
+      toast({
+        title: "Успешно",
+        description: isEdit ? "Администратор обновлён" : "Администратор создан",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить администратора",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: InsertAdminUserWithValidation) => {
+    createAdminMutation.mutate(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? "Редактировать администратора" : "Добавить администратора"}
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Имя пользователя</FormLabel>
+                  <FormControl>
+                    <Input placeholder="admin123" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {isEdit ? "Новый пароль (оставьте пустым, чтобы не менять)" : "Пароль"}
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ФИО (необязательно)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Иван Иванов" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email (необязательно)</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="admin@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex space-x-4">
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Активный</FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isSuperAdmin"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Супер-админ</FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Отмена
+              </Button>
+              <Button type="submit" disabled={createAdminMutation.isPending}>
+                {createAdminMutation.isPending
+                  ? "Сохранение..."
+                  : isEdit
+                  ? "Обновить"
+                  : "Создать"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

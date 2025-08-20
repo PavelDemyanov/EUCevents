@@ -55,3 +55,6 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 - **Public Pages**: Created public event view without phone numbers and admin functions
 - **Database Schema**: Added shareCode field to events table for public sharing
 - **Share Button**: Added "Поделиться" button on participants page that opens public link in new window
+- **Mobile UI Improvements**: Comprehensive mobile responsiveness across all pages with reduced sidebar width, responsive grid layouts, mobile headers
+- **Admin Management System**: Added full admin user management with login/password creation, role-based access control, and admin dashboard in settings
+- **Enhanced Database Schema**: Extended adminUsers table with fullName, email, isActive, isSuperAdmin fields for comprehensive user management
