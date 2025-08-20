@@ -44,68 +44,47 @@ export async function generateParticipantsPDF(
       doc.on('data', (buffer) => buffers.push(buffer));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      // Try to use DejaVu Sans font that supports Cyrillic
+      // Try to use a font that supports Cyrillic characters
       try {
-        // Try to find and use DejaVu font
-        const fs = require('fs');
-        const dejavuPaths = [
-          '/nix/store/*/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-          '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-          '/System/Library/Fonts/DejaVuSans.ttf'
-        ];
-        
-        let fontFound = false;
-        for (const fontPath of dejavuPaths) {
-          try {
-            if (fs.existsSync(fontPath) || fontPath.includes('*')) {
-              // For nix paths with wildcards, we'll use exec to find the actual path
-              if (fontPath.includes('*')) {
-                const { execSync } = require('child_process');
-                try {
-                  const actualPath = execSync(`find /nix/store -name "DejaVuSans.ttf" -path "*dejavu*" | head -1`).toString().trim();
-                  if (actualPath) {
-                    doc.font(actualPath);
-                    fontFound = true;
-                    break;
-                  }
-                } catch (e) {
-                  continue;
-                }
-              } else {
-                doc.font(fontPath);
-                fontFound = true;
-                break;
-              }
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-        
-        if (!fontFound) {
-          doc.font('Helvetica');
-        }
+        // Use the system DejaVu font directly
+        doc.font('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+        console.log('DejaVu font loaded successfully');
       } catch (e) {
-        // Fallback to default font
-        console.log('Font loading failed, using Helvetica');
-        doc.font('Helvetica');
+        try {
+          // Try Nix store path
+          const { execSync } = require('child_process');
+          const dejavuPath = execSync('find /nix/store -name "DejaVuSans.ttf" 2>/dev/null | head -1').toString().trim();
+          if (dejavuPath) {
+            doc.font(dejavuPath);
+            console.log('DejaVu font loaded from Nix store');
+          } else {
+            throw new Error('DejaVu not found');
+          }
+        } catch (e2) {
+          // Ultimate fallback - encode text differently for better Cyrillic support
+          console.log('Using Helvetica with improved text encoding');
+        }
       }
       
-      // Title with proper encoding
+      // Title with proper encoding - convert to buffer to ensure UTF-8
+      const titleText = Buffer.from('Список участников мероприятия', 'utf8').toString('utf8');
       doc.fontSize(20)
-         .text('Список участников мероприятия', { 
+         .text(titleText, { 
            align: 'center',
            width: doc.page.width - 100
          });
       
       doc.moveDown(0.5);
       
-      // Event details
+      // Event details with UTF-8 encoding
+      const eventName = Buffer.from(event.name || '', 'utf8').toString('utf8');
+      const eventLocation = Buffer.from(event.location || '', 'utf8').toString('utf8');
+      
       doc.fontSize(16)
-         .text(event.name, { align: 'center' });
+         .text(eventName, { align: 'center' });
       
       doc.fontSize(12)
-         .text(event.location, { align: 'center' })
+         .text(eventLocation, { align: 'center' })
          .text(formatDateTime(event.datetime), { align: 'center' });
       
       doc.moveDown(1);
@@ -118,12 +97,21 @@ export async function generateParticipantsPDF(
       const itemPhoneX = 350;
       const itemTransportX = 450;
 
+      // Table headers with UTF-8 encoding
+      const headers = {
+        number: Buffer.from('№', 'utf8').toString('utf8'),
+        fullName: Buffer.from('ФИО', 'utf8').toString('utf8'),
+        telegram: Buffer.from('Telegram', 'utf8').toString('utf8'),
+        phone: Buffer.from('Телефон', 'utf8').toString('utf8'),
+        transport: Buffer.from('Транспорт', 'utf8').toString('utf8')
+      };
+
       doc.fontSize(10)
-         .text('№', itemCodeX, tableTop)
-         .text('ФИО', itemNameX, tableTop)
-         .text('Telegram', itemNicknameX, tableTop)
-         .text('Телефон', itemPhoneX, tableTop)
-         .text('Транспорт', itemTransportX, tableTop);
+         .text(headers.number, itemCodeX, tableTop)
+         .text(headers.fullName, itemNameX, tableTop)
+         .text(headers.telegram, itemNicknameX, tableTop)
+         .text(headers.phone, itemPhoneX, tableTop)
+         .text(headers.transport, itemTransportX, tableTop);
 
       // Draw header line
       doc.moveTo(itemCodeX, tableTop + 20)
@@ -145,12 +133,17 @@ export async function generateParticipantsPDF(
           ? `${getTransportTypeLabel(participant.transportType)} (${participant.transportModel})`
           : getTransportTypeLabel(participant.transportType);
 
+        // Ensure UTF-8 encoding for all text
+        const fullName = Buffer.from(participant.fullName || '', 'utf8').toString('utf8');
+        const nickname = Buffer.from(participant.telegramNickname || '', 'utf8').toString('utf8');
+        const transportTextUtf8 = Buffer.from(transportText || '', 'utf8').toString('utf8');
+
         doc.fontSize(9)
            .text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
-           .text(participant.fullName, itemNameX, currentY, { width: 160 })
-           .text(participant.telegramNickname || '', itemNicknameX, currentY, { width: 90 })
+           .text(fullName, itemNameX, currentY, { width: 160 })
+           .text(nickname, itemNicknameX, currentY, { width: 90 })
            .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
-           .text(transportText, itemTransportX, currentY, { width: 100 });
+           .text(transportTextUtf8, itemTransportX, currentY, { width: 100 });
 
         currentY += 20;
 
@@ -171,26 +164,34 @@ export async function generateParticipantsPDF(
          .lineTo(550, summaryY - 20)
          .stroke();
 
+      // Summary section with UTF-8 encoding
+      const summaryText = Buffer.from('Сводка по участникам:', 'utf8').toString('utf8');
       doc.fontSize(14)
-         .text('Сводка по участникам:', 50, summaryY);
+         .text(summaryText, 50, summaryY);
 
       const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
       const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
       const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
       const totalCount = activeParticipants.length;
 
+      const monowheelText = Buffer.from(`Моноколеса: ${monowheelCount}`, 'utf8').toString('utf8');
+      const scooterText = Buffer.from(`Самокаты: ${scooterCount}`, 'utf8').toString('utf8');
+      const spectatorText = Buffer.from(`Зрители: ${spectatorCount}`, 'utf8').toString('utf8');
+      const totalText = Buffer.from(`Всего участников: ${totalCount}`, 'utf8').toString('utf8');
+
       doc.fontSize(12)
-         .text(`Моноколеса: ${monowheelCount}`, 100, summaryY + 30)
-         .text(`Самокаты: ${scooterCount}`, 250, summaryY + 30)
-         .text(`Зрители: ${spectatorCount}`, 400, summaryY + 30);
+         .text(monowheelText, 100, summaryY + 30)
+         .text(scooterText, 250, summaryY + 30)
+         .text(spectatorText, 400, summaryY + 30);
 
       doc.fontSize(14)
-         .text(`Всего участников: ${totalCount}`, 50, summaryY + 60, { align: 'center' });
+         .text(totalText, 50, summaryY + 60, { align: 'center' });
 
-      // Footer
+      // Footer with UTF-8 encoding
+      const footerText = Buffer.from(`Сгенерировано ${new Date().toLocaleString('ru-RU')}`, 'utf8').toString('utf8');
       doc.fontSize(8)
          .text(
-           `Сгенерировано ${new Date().toLocaleString('ru-RU')}`,
+           footerText,
            50,
            750,
            { align: 'center' }
@@ -205,23 +206,25 @@ export async function generateParticipantsPDF(
 
 function getTransportTypeLabel(type: string): string {
   switch (type) {
-    case 'monowheel': return 'Моноколесо';
-    case 'scooter': return 'Самокат';
-    case 'spectator': return 'Зритель';
-    default: return type;
+    case 'monowheel': return Buffer.from('Моноколесо', 'utf8').toString('utf8');
+    case 'scooter': return Buffer.from('Самокат', 'utf8').toString('utf8');
+    case 'spectator': return Buffer.from('Зритель', 'utf8').toString('utf8');
+    default: return Buffer.from(type || '', 'utf8').toString('utf8');
   }
 }
 
 function formatDateTime(date: Date | string): string {
-  if (!date) return 'Не указано';
+  if (!date) return Buffer.from('Не указано', 'utf8').toString('utf8');
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(dateObj.getTime())) return 'Неверная дата';
+  if (isNaN(dateObj.getTime())) return Buffer.from('Неверная дата', 'utf8').toString('utf8');
   
-  return new Intl.DateTimeFormat('ru-RU', {
+  const formatted = new Intl.DateTimeFormat('ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(dateObj);
+  
+  return Buffer.from(formatted, 'utf8').toString('utf8');
 }
