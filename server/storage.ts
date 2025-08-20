@@ -27,7 +27,7 @@ import {
   type UserWithEvent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, inArray, isNotNull, ne } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, isNotNull, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -394,15 +394,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUniqueLocations(): Promise<string[]> {
-    const result = await db
-      .selectDistinct({ location: events.location })
-      .from(events)
-      .where(isNotNull(events.location))
-      .orderBy(events.location);
-    
-    return result
-      .map(row => row.location)
-      .filter(location => location && location.trim().length > 0);
+    try {
+      console.log("Executing getUniqueLocations query...");
+      const result = await db
+        .selectDistinct({ location: events.location })
+        .from(events)
+        .where(isNotNull(events.location));
+      
+      console.log("Raw query result:", result);
+      const locations = result
+        .map(row => row.location)
+        .filter(location => location && location.trim().length > 0)
+        .sort();
+      
+      console.log("Processed locations:", locations);
+      return locations;
+    } catch (error) {
+      console.error("Error in getUniqueLocations:", error);
+      throw error;
+    }
   }
 
   async generateShareCode(eventId: number): Promise<string> {
