@@ -44,13 +44,59 @@ export async function generateParticipantsPDF(
       doc.on('data', (buffer) => buffers.push(buffer));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      // Register a font that supports Cyrillic
-      // Note: In production, you should include a proper font file
-      // For now, we'll use the default font which has limited Cyrillic support
+      // Try to use DejaVu Sans font that supports Cyrillic
+      try {
+        // Try to find and use DejaVu font
+        const fs = require('fs');
+        const dejavuPaths = [
+          '/nix/store/*/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+          '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+          '/System/Library/Fonts/DejaVuSans.ttf'
+        ];
+        
+        let fontFound = false;
+        for (const fontPath of dejavuPaths) {
+          try {
+            if (fs.existsSync(fontPath) || fontPath.includes('*')) {
+              // For nix paths with wildcards, we'll use exec to find the actual path
+              if (fontPath.includes('*')) {
+                const { execSync } = require('child_process');
+                try {
+                  const actualPath = execSync(`find /nix/store -name "DejaVuSans.ttf" -path "*dejavu*" | head -1`).toString().trim();
+                  if (actualPath) {
+                    doc.font(actualPath);
+                    fontFound = true;
+                    break;
+                  }
+                } catch (e) {
+                  continue;
+                }
+              } else {
+                doc.font(fontPath);
+                fontFound = true;
+                break;
+              }
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (!fontFound) {
+          doc.font('Helvetica');
+        }
+      } catch (e) {
+        // Fallback to default font
+        console.log('Font loading failed, using Helvetica');
+        doc.font('Helvetica');
+      }
       
-      // Title
+      // Title with proper encoding
       doc.fontSize(20)
-         .text('Список участников мероприятия', { align: 'center' });
+         .text('Список участников мероприятия', { 
+           align: 'center',
+           width: doc.page.width - 100
+         });
       
       doc.moveDown(0.5);
       
@@ -95,12 +141,16 @@ export async function generateParticipantsPDF(
           currentY = 50;
         }
 
+        const transportText = participant.transportModel 
+          ? `${getTransportTypeLabel(participant.transportType)} (${participant.transportModel})`
+          : getTransportTypeLabel(participant.transportType);
+
         doc.fontSize(9)
            .text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
            .text(participant.fullName, itemNameX, currentY, { width: 160 })
            .text(participant.telegramNickname || '', itemNicknameX, currentY, { width: 90 })
            .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
-           .text(getTransportTypeLabel(participant.transportType), itemTransportX, currentY);
+           .text(transportText, itemTransportX, currentY, { width: 100 });
 
         currentY += 20;
 
