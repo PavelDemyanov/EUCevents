@@ -154,22 +154,9 @@ export class DatabaseStorage implements IStorage {
       if (telegramNickname) {
         const fixedBinding = await this.getFixedNumberByTelegramNickname(telegramNickname);
         if (fixedBinding) {
-          // Check if this number is available for this event
-          const existingUserWithNumber = await db
-            .select()
-            .from(users)
-            .where(
-              and(
-                eq(users.eventId, existingUser.eventId),
-                eq(users.participantNumber, fixedBinding.participantNumber),
-                eq(users.isActive, true),
-                ne(users.id, id) // Exclude current user
-              )
-            );
-          
-          if (existingUserWithNumber.length === 0) {
-            (finalUpdates as any).participantNumber = fixedBinding.participantNumber;
-          }
+          // Fixed numbers have priority - reassign conflicting user if needed
+          await this.reassignConflictingNumber(existingUser.eventId, fixedBinding.participantNumber);
+          (finalUpdates as any).participantNumber = fixedBinding.participantNumber;
         }
       }
     }
@@ -234,21 +221,9 @@ export class DatabaseStorage implements IStorage {
     if (telegramNickname) {
       const fixedBinding = await this.getFixedNumberByTelegramNickname(telegramNickname);
       if (fixedBinding) {
-        // Check if this number is already taken by someone else for this event
-        const existingUser = await db
-          .select()
-          .from(users)
-          .where(
-            and(
-              eq(users.eventId, eventId),
-              eq(users.participantNumber, fixedBinding.participantNumber),
-              eq(users.isActive, true)
-            )
-          );
-        
-        if (existingUser.length === 0) {
-          return fixedBinding.participantNumber;
-        }
+        // Fixed numbers have priority - force reassign if needed
+        await this.reassignConflictingNumber(eventId, fixedBinding.participantNumber);
+        return fixedBinding.participantNumber;
       }
     }
 
@@ -631,6 +606,34 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async reassignConflictingNumber(eventId: number, targetNumber: number): Promise<void> {
+    // Find user who currently has this number in the event
+    const [conflictingUser] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.eventId, eventId),
+          eq(users.participantNumber, targetNumber),
+          eq(users.isActive, true)
+        )
+      );
+
+    if (conflictingUser) {
+      // Get a new available number for the conflicting user (using existing logic)
+      const newNumber = await this.findNextAvailableNumber(eventId);
+      
+      // Reassign the conflicting user to a new number
+      await db
+        .update(users)
+        .set({
+          participantNumber: newNumber,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, conflictingUser.id));
+    }
+  }
+
   async updateUsersWithFixedNumber(telegramNickname: string, participantNumber: number): Promise<void> {
     // Find all users with this telegram nickname
     const usersToUpdate = await db
@@ -643,32 +646,19 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    // Update each user's participant number
+    // Update each user's participant number - force assign with priority
     for (const user of usersToUpdate) {
-      // Check if the target number is already taken by someone else in the same event
-      const conflictingUsers = await db
-        .select()
-        .from(users)
-        .where(
-          and(
-            eq(users.eventId, user.eventId),
-            eq(users.participantNumber, participantNumber),
-            ne(users.id, user.id),
-            eq(users.isActive, true)
-          )
-        );
-
-      if (conflictingUsers.length === 0) {
-        // Safe to update - no conflicts
-        await db
-          .update(users)
-          .set({
-            participantNumber,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, user.id));
-      }
-      // If there's a conflict, we skip this user - they'll get the fixed number on next registration
+      // Reassign any conflicting user in the same event
+      await this.reassignConflictingNumber(user.eventId, participantNumber);
+      
+      // Now safely assign the fixed number
+      await db
+        .update(users)
+        .set({
+          participantNumber,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
     }
   }
 
@@ -681,6 +671,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(fixedNumberBindings)
       .where(eq(fixedNumberBindings.telegramNickname, nickname));
+    return binding;
+  }
+
+  async getFixedNumberByParticipantNumber(participantNumber: number): Promise<FixedNumberBinding | undefined> {
+    const [binding] = await db
+      .select()
+      .from(fixedNumberBindings)
+      .where(eq(fixedNumberBindings.participantNumber, participantNumber));
     return binding;
   }
 
@@ -807,6 +805,39 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return user;
+  }
+
+  // Helper method to find next available number for reassignment
+  async findNextAvailableNumber(eventId: number): Promise<number> {
+    // Get all assigned numbers for this event
+    const assignedUsers = await db
+      .select({ participantNumber: users.participantNumber })
+      .from(users)
+      .where(
+        and(
+          eq(users.eventId, eventId),
+          eq(users.isActive, true),
+          isNotNull(users.participantNumber)
+        )
+      );
+
+    const assignedNumbers = new Set(
+      assignedUsers
+        .map(u => u.participantNumber)
+        .filter(num => num !== null)
+    );
+
+    // Get reserved numbers for this event
+    const reservedNumbers = await this.getReservedNumbers(eventId);
+    const reservedSet = new Set(reservedNumbers.map(rn => rn.number));
+
+    // Find the next available number starting from 1
+    let nextNumber = 1;
+    while (assignedNumbers.has(nextNumber) || reservedSet.has(nextNumber)) {
+      nextNumber++;
+    }
+
+    return nextNumber;
   }
 }
 

@@ -52,9 +52,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup routes - must come before auth check
   app.get("/api/setup/status", async (req, res) => {
     try {
-      const isComplete = await setupManager.isSetupComplete();
       const status = await setupManager.getSetupStatus();
-      res.json({ isComplete, ...status });
+      res.json(status);
     } catch (error) {
       res.status(500).json({ message: "Ошибка проверки настройки" });
     }
@@ -81,7 +80,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isSetupComplete) {
       const existingAdmin = await storage.getAdminByUsername("admin");
       if (!existingAdmin) {
-        await storage.createAdmin("admin", "admin123");
+        await storage.createAdmin({
+          username: "admin",
+          password: "admin123",
+          fullName: "Administrator",
+          email: null,
+          isActive: true,
+          isSuperAdmin: true
+        });
         console.log("Создан администратор по умолчанию: admin/admin123");
       }
     }
@@ -497,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scooterCount: eventWithStats.scooterCount,
         spectatorCount: eventWithStats.spectatorCount,
         totalCount: eventWithStats.participantCount,
-        }, botUsername);
+        }, botUsername || undefined);
       }
 
       res.json({ success: true });
@@ -542,15 +548,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check conflicts
       const conflicts = await storage.checkFixedNumberConflicts(bindingData.participantNumber);
       
+      // Check if this number is already bound to another user
+      const existingBinding = await storage.getFixedNumberByParticipantNumber(bindingData.participantNumber);
+      if (existingBinding && existingBinding.telegramNickname !== bindingData.telegramNickname) {
+        // Delete the old binding first
+        await storage.deleteFixedNumberBinding(existingBinding.id);
+      }
+      
       const binding = await storage.createFixedNumberBinding(bindingData);
       
       res.json({ 
         binding, 
         updatedUsersCount: existingUsers.length,
         conflicts: conflicts.length,
-        message: existingUsers.length > 0 
-          ? `Привязка создана. Обновлено ${existingUsers.length} существующих пользователей.${conflicts.length > 0 ? ` Конфликтов: ${conflicts.length}` : ''}`
-          : "Привязка создана."
+        reassignedFrom: existingBinding?.telegramNickname || null,
+        message: existingBinding 
+          ? `Привязка создана. Номер ${bindingData.participantNumber} переназначен с @${existingBinding.telegramNickname} на @${bindingData.telegramNickname}.${existingUsers.length > 0 ? ` Обновлено ${existingUsers.length} пользователей.` : ''}`
+          : existingUsers.length > 0 
+            ? `Привязка создана. Обновлено ${existingUsers.length} существующих пользователей.`
+            : "Привязка создана."
       });
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка создания привязки номера" });

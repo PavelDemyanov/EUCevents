@@ -735,28 +735,28 @@ export default function Settings() {
               )}
               
               {numberConflicts.length > 0 && (
-                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <div className="text-sm font-medium text-amber-800">
-                    ⚠️ Конфликт номеров ({numberConflicts.length})
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="text-sm font-medium text-blue-800">
+                    🔄 Переназначение номеров ({numberConflicts.length})
                   </div>
-                  <div className="text-xs text-amber-700 mt-1">
-                    Номер {newBinding.participantNumber} уже используется:
+                  <div className="text-xs text-blue-700 mt-1">
+                    Номер {newBinding.participantNumber} будет забран у:
                   </div>
-                  <div className="text-xs text-amber-600 mt-2 space-y-1 max-h-20 overflow-y-auto">
+                  <div className="text-xs text-blue-600 mt-2 space-y-1 max-h-20 overflow-y-auto">
                     {numberConflicts.map((conflict, index) => (
                       <div key={index}>
                         • {conflict.userName} (@{conflict.telegramNickname}) в "{conflict.eventName}"
                       </div>
                     ))}
                   </div>
-                  <div className="text-xs text-amber-700 mt-2">
-                    При создании привязки участники не получат номер {newBinding.participantNumber} в мероприятиях, где он уже занят.
+                  <div className="text-xs text-blue-700 mt-2">
+                    <strong>Статичные номера имеют приоритет!</strong> Указанные участники получат другие свободные номера, а номер {newBinding.participantNumber} будет зарезервирован за новой привязкой.
                   </div>
                 </div>
               )}
               
               <p className="text-xs text-gray-500 mt-1">
-                Фиксированный номер от 1 до 999. При создании привязки все существующие пользователи с этим telegram-ником будут обновлены на новый номер (если номер не занят в их мероприятиях).
+                Фиксированный номер от 1 до 999. При создании привязки все существующие пользователи с этим telegram-ником получат указанный номер. Если номер уже занят другими участниками, он будет у них забран и они получат другие свободные номера.
               </p>
             </div>
             <div className="flex justify-end space-x-2">
