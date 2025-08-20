@@ -123,10 +123,25 @@ export async function generateParticipantsPDF(
       const activeParticipants = (participants || []).filter(p => p.isActive);
       
       activeParticipants.forEach((participant, index) => {
-        // Check if we need a new page
-        if (currentY > 700) {
+        // Check if we need a new page (with extra space for multi-line text)
+        if (currentY > 650) {
           doc.addPage();
           currentY = 50;
+          
+          // Redraw header on new page
+          doc.fontSize(10)
+             .text(headers.number, itemCodeX, currentY)
+             .text(headers.fullName, itemNameX, currentY)
+             .text(headers.telegram, itemNicknameX, currentY)
+             .text(headers.phone, itemPhoneX, currentY)
+             .text(headers.transport, itemTransportX, currentY);
+
+          // Draw header line
+          doc.moveTo(itemCodeX, currentY + 20)
+             .lineTo(550, currentY + 20)
+             .stroke();
+             
+          currentY += 30;
         }
 
         const transportText = participant.transportModel 
@@ -138,19 +153,30 @@ export async function generateParticipantsPDF(
         const nickname = Buffer.from(participant.telegramNickname || '', 'utf8').toString('utf8');
         const transportTextUtf8 = Buffer.from(transportText || '', 'utf8').toString('utf8');
 
-        doc.fontSize(9)
-           .text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
+        // Calculate text heights to determine row height
+        const fontSize = 9;
+        doc.fontSize(fontSize);
+        
+        // Measure text heights for proper row spacing
+        const nameHeight = doc.heightOfString(fullName, { width: 160 });
+        const nicknameHeight = doc.heightOfString(nickname, { width: 90 });
+        const transportHeight = doc.heightOfString(transportTextUtf8, { width: 100 });
+        
+        const maxHeight = Math.max(nameHeight, nicknameHeight, transportHeight, fontSize);
+        const rowHeight = Math.max(maxHeight + 6, 20); // At least 20px, but more if text wraps
+
+        doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
            .text(fullName, itemNameX, currentY, { width: 160 })
            .text(nickname, itemNicknameX, currentY, { width: 90 })
            .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
            .text(transportTextUtf8, itemTransportX, currentY, { width: 100 });
 
-        currentY += 20;
+        currentY += rowHeight;
 
-        // Draw row line
+        // Draw row line with proper spacing
         if (index < activeParticipants.length - 1) {
-          doc.moveTo(itemCodeX, currentY - 5)
-             .lineTo(550, currentY - 5)
+          doc.moveTo(itemCodeX, currentY - 3)
+             .lineTo(550, currentY - 3)
              .stroke();
         }
       });
