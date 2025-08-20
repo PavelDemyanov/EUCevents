@@ -552,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingUserBinding = await storage.getFixedNumberByTelegramNickname(bindingData.telegramNickname);
       if (existingUserBinding) {
         return res.status(400).json({ 
-          message: `Пользователь @${bindingData.telegramNickname} уже имеет привязку к номеру ${existingUserBinding.participantNumber}. Дублирование привязок недопустимо.`,
+          message: `У пользователя @${bindingData.telegramNickname} уже есть постоянный номер ${existingUserBinding.participantNumber}. Один пользователь может иметь только один постоянный номер.`,
           existingNumber: existingUserBinding.participantNumber
         });
       }
@@ -561,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingBinding = await storage.getFixedNumberByParticipantNumber(bindingData.participantNumber);
       if (existingBinding && existingBinding.telegramNickname !== bindingData.telegramNickname) {
         return res.status(400).json({ 
-          message: `Номер ${bindingData.participantNumber} уже привязан к пользователю @${existingBinding.telegramNickname}. Дублирование статичных номеров недопустимо.`,
+          message: `Номер ${bindingData.participantNumber} уже закреплён за пользователем @${existingBinding.telegramNickname}. Выберите другой номер или удалите существующую привязку.`,
           conflictWith: existingBinding.telegramNickname
         });
       }
