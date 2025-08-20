@@ -4,11 +4,19 @@ import path from 'path';
 import { Event, UserWithEvent } from '@shared/schema';
 
 export async function generateParticipantsPDF(
-  event: Event,
-  participants: UserWithEvent[]
+  eventId: number,
+  storage: any
 ): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      // Get event and participants data
+      const event = await storage.getEvent(eventId);
+      const participants = await storage.getUsersByEventId(eventId);
+      
+      if (!event) {
+        return reject(new Error('Мероприятие не найдено'));
+      }
+
       const doc = new PDFDocument({
         size: 'A4',
         margin: 50,
@@ -60,7 +68,7 @@ export async function generateParticipantsPDF(
 
       // Table rows
       let currentY = tableTop + 30;
-      const activeParticipants = participants?.filter(p => p.isActive) || [];
+      const activeParticipants = (participants || []).filter(p => p.isActive);
       
       activeParticipants.forEach((participant, index) => {
         // Check if we need a new page
@@ -134,6 +142,16 @@ function getTransportTypeLabel(type: string): string {
     case 'spectator': return 'Зритель';
     default: return type;
   }
+}
+
+function formatDateTime(date: Date): string {
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
 }
 
 function formatDateTime(date: Date | string): string {
