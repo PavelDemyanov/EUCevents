@@ -317,20 +317,46 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
 
         try {
-          // Check if user is already registered for this event
+          // Check if user is already registered for this event (active or inactive)
           const existingRegistration = await storage.getUserRegistration(telegramId, state.eventId);
           if (existingRegistration) {
-            userStates.delete(telegramId);
-            return bot.sendMessage(
-              chatId,
-              `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
-              `📋 Ваши данные:\n` +
-              `👤 ФИО: ${existingRegistration.fullName}\n` +
-              `📱 Телефон: ${existingRegistration.phone}\n` +
-              `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
-              `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
-              `Если хотите изменить данные, напишите мне снова.`
-            );
+            if (existingRegistration.isActive) {
+              userStates.delete(telegramId);
+              return bot.sendMessage(
+                chatId,
+                `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
+                `📋 Ваши данные:\n` +
+                `👤 ФИО: ${existingRegistration.fullName}\n` +
+                `📱 Телефон: ${existingRegistration.phone}\n` +
+                `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
+                `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
+                `Если хотите изменить данные, напишите мне снова.`
+              );
+            } else {
+              // Reactivate existing registration instead of creating new one
+              const updatedUser = await storage.updateUser(existingRegistration.id, {
+                fullName: state.existingData.fullName,
+                phone: state.existingData.phone,
+                transportType: state.existingData.transportType,
+                transportModel: state.existingData.transportModel || null,
+                isActive: true,
+                telegramNickname: state.telegramNickname
+              });
+
+              const event = await storage.getEvent(state.eventId);
+              userStates.delete(telegramId);
+              return bot.sendMessage(
+                chatId,
+                `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
+                `📋 Ваши данные:\n` +
+                `📅 Мероприятие: ${event?.name}\n` +
+                `👤 ФИО: ${updatedUser.fullName}\n` +
+                `📱 Телефон: ${updatedUser.phone}\n` +
+                `🚗 Транспорт: ${getTransportTypeLabel(updatedUser.transportType)}${updatedUser.transportModel ? ` (${updatedUser.transportModel})` : ''}\n` +
+                `🏷️ Ваш номер участника: ${updatedUser.participantNumber}\n\n` +
+                `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+              );
+            }
           }
         } catch (error) {
           console.error('Error checking existing registration:', error);

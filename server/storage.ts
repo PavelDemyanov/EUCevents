@@ -552,8 +552,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(users.telegramId, telegramId),
-          eq(users.eventId, eventId),
-          eq(users.isActive, true)
+          eq(users.eventId, eventId)
         )
       );
     return user;
