@@ -12,6 +12,24 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, FileText, Download, Bell } from "lucide-react";
 import type { UserWithEvent } from "@shared/schema";
 
+// Format phone number for display: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  // If already formatted, return as is
+  if (phone.includes('(') && phone.includes(')')) {
+    return phone;
+  }
+  
+  // Format: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
+  const match = phone.match(/^7(\d{3})(\d{3})(\d{2})(\d{2})$/);
+  if (match) {
+    return `+7 (${match[1]}) ${match[2]}-${match[3]}-${match[4]}`;
+  }
+  
+  return phone;
+}
+
 interface ParticipantsProps {
   eventId: number;
   onBack: () => void;
@@ -182,6 +200,9 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       key: 'phone' as keyof UserWithEvent,
       header: 'Телефон',
       sortable: true,
+      render: (value: string) => (
+        <span className="font-mono text-sm">{formatPhoneNumber(value)}</span>
+      ),
     },
     {
       key: 'transportType' as keyof UserWithEvent,
