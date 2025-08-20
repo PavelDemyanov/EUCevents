@@ -316,20 +316,25 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
-        // Check if user is already registered for this event
-        const existingRegistration = await storage.getUserRegistration(telegramId, state.eventId);
-        if (existingRegistration) {
-          userStates.delete(telegramId);
-          return bot.sendMessage(
-            chatId,
-            `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
-            `📋 Ваши данные:\n` +
-            `👤 ФИО: ${existingRegistration.fullName}\n` +
-            `📱 Телефон: ${existingRegistration.phone}\n` +
-            `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
-            `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
-            `Если хотите изменить данные, напишите мне снова.`
-          );
+        try {
+          // Check if user is already registered for this event
+          const existingRegistration = await storage.getUserRegistration(telegramId, state.eventId);
+          if (existingRegistration) {
+            userStates.delete(telegramId);
+            return bot.sendMessage(
+              chatId,
+              `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
+              `📋 Ваши данные:\n` +
+              `👤 ФИО: ${existingRegistration.fullName}\n` +
+              `📱 Телефон: ${existingRegistration.phone}\n` +
+              `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
+              `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
+              `Если хотите изменить данные, напишите мне снова.`
+            );
+          }
+        } catch (error) {
+          console.error('Error checking existing registration:', error);
+          // Continue with registration if check fails
         }
 
         // Check if we have transport data from previous registration
@@ -345,21 +350,36 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             eventId: state.eventId,
           };
 
-          const user = await storage.createUser(userData);
-          const event = await storage.getEvent(state.eventId);
+          try {
+            const user = await storage.createUser(userData);
+            const event = await storage.getEvent(state.eventId);
 
-          userStates.delete(telegramId);
-          return bot.sendMessage(
-            chatId,
-            `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
-            `📋 Ваши данные:\n` +
-            `📅 Мероприятие: ${event?.name}\n` +
-            `👤 ФИО: ${user.fullName}\n` +
-            `📱 Телефон: ${user.phone}\n` +
-            `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}${user.transportModel ? ` (${user.transportModel})` : ''}\n` +
-            `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
-            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
-          );
+            userStates.delete(telegramId);
+            return bot.sendMessage(
+              chatId,
+              `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
+              `📋 Ваши данные:\n` +
+              `📅 Мероприятие: ${event?.name}\n` +
+              `👤 ФИО: ${user.fullName}\n` +
+              `📱 Телефон: ${user.phone}\n` +
+              `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}${user.transportModel ? ` (${user.transportModel})` : ''}\n` +
+              `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
+              `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+            );
+          } catch (error: any) {
+            if (error.code === '23505') {
+              userStates.delete(telegramId);
+              return bot.sendMessage(
+                chatId,
+                `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
+                `Если хотите изменить данные, напишите мне снова.`
+              );
+            } else {
+              console.error('Error creating user:', error);
+              userStates.delete(telegramId);
+              return bot.sendMessage(chatId, "Произошла ошибка при регистрации. Попробуйте позже.");
+            }
+          }
         }
 
         // Use existing data, go straight to transport type selection (for spectators or missing transport data)
