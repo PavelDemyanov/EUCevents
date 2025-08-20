@@ -261,5 +261,5 @@ export type EventWithStats = Event & {
 
 // User with event data type
 export type UserWithEvent = User & {
-  event: Event;
+  event: Event | null;
 };

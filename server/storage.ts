@@ -22,6 +22,7 @@ import {
   type FixedNumberBinding,
   type InsertFixedNumberBinding,
   type AdminUser,
+  type InsertAdminUser,
   type EventWithStats,
   type UserWithEvent,
 } from "@shared/schema";
@@ -38,7 +39,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
   getUsersByEventId(eventId: number): Promise<UserWithEvent[]>;
+  getAllUsers(): Promise<UserWithEvent[]>;
   deactivateUser(id: number): Promise<void>;
+  deleteUser(id: number): Promise<void>;
   getAvailableParticipantNumber(eventId: number): Promise<number>;
 
   // Event operations
@@ -196,6 +199,22 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getAllUsers(): Promise<UserWithEvent[]> {
+    const result = await db
+      .select({
+        user: users,
+        event: events,
+      })
+      .from(users)
+      .leftJoin(events, eq(users.eventId, events.id))
+      .orderBy(desc(users.createdAt));
+
+    return result.map(row => ({
+      ...row.user,
+      event: row.event || null,
+    })) as UserWithEvent[];
+  }
+
   async deactivateUser(id: number): Promise<void> {
     await db
       .update(users)
@@ -204,6 +223,10 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(users.id, id));
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async getAvailableParticipantNumber(eventId: number, telegramNickname?: string | null): Promise<number> {

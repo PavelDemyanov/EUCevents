@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Login from "@/pages/login";
 import Events from "@/pages/events";
 import Participants from "@/pages/participants";
+import AllParticipants from "@/pages/all-participants";
 import Settings from "@/pages/settings";
 import PublicEvent from "@/pages/public-event";
 import Setup from "@/pages/setup";
@@ -17,7 +18,7 @@ import { useLogout } from "@/hooks/useAuth";
 import { Calendar, Users, Settings as SettingsIcon, LogOut, Menu } from "lucide-react";
 
 function Dashboard() {
-  const [currentPage, setCurrentPage] = useState<"events" | "participants" | "settings">("events");
+  const [currentPage, setCurrentPage] = useState<"events" | "participants" | "all-participants" | "settings">("events");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedEventName, setSelectedEventName] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -92,6 +93,18 @@ function Dashboard() {
             <Calendar className="w-5 h-5 mr-3" />
             Мероприятия
           </button>
+          <button
+            onClick={() => {
+              setCurrentPage("all-participants");
+              setMobileMenuOpen(false);
+            }}
+            className={`sidebar-link w-full text-left ${
+              currentPage === "all-participants" ? "sidebar-link-active" : ""
+            }`}
+          >
+            <Users className="w-5 h-5 mr-3" />
+            Все участники
+          </button>
           {selectedEventId && (
             <button
               onClick={() => {
@@ -148,6 +161,7 @@ function Dashboard() {
             <h1 className="text-xl font-semibold text-gray-900">
               {currentPage === "events" ? "Мероприятия" : 
                currentPage === "participants" ? "Участники мероприятия" :
+               currentPage === "all-participants" ? "Все участники" :
                "Настройки системы"}
             </h1>
             <div className="text-sm text-gray-600">
@@ -165,6 +179,11 @@ function Dashboard() {
             <Participants 
               eventId={selectedEventId} 
               onBack={handleBackToEvents}
+            />
+          )}
+          {currentPage === "all-participants" && (
+            <AllParticipants 
+              onBack={() => setCurrentPage("events")}
             />
           )}
           {currentPage === "settings" && (

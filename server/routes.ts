@@ -341,6 +341,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/all", requireAuth, async (req, res) => {
+    try {
+      const participants = await storage.getAllUsers();
+      res.json(participants);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка получения всех участников" });
+    }
+  });
+
   app.put("/api/participants/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -359,6 +368,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Ошибка деактивации участника" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteUser(id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка удаления участника" });
     }
   });
 
