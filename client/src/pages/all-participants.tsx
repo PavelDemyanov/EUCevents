@@ -202,7 +202,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Контакты</th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Транспорт</th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Мероприятие</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Номер</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">№</th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Статус</th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Действия</th>
                 </tr>

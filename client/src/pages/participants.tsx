@@ -223,7 +223,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
   const columns = [
     {
       key: 'participantNumber' as keyof UserWithEvent,
-      header: '№ участника',
+      header: '№',
       sortable: true,
       render: (value: number, row: UserWithEvent) => (
         <span className={`participant-number participant-number-${row.transportType}`}>
