@@ -165,14 +165,15 @@ export default function Settings() {
   // Мутации для привязки номеров
   const createBindingMutation = useMutation({
     mutationFn: async (bindingData: InsertFixedNumberBinding) => {
-      await apiRequest("POST", "/api/fixed-bindings", bindingData);
+      return await apiRequest("POST", "/api/fixed-bindings", bindingData);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-bindings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] }); // Refresh participants counts
       resetBindingForm();
       toast({
         title: "Успешно",
-        description: "Привязка номера создана",
+        description: response.message || "Привязка номера создана",
       });
     },
     onError: (error: any) => {
@@ -628,7 +629,7 @@ export default function Settings() {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                Фиксированный номер от 1 до 999
+                Фиксированный номер от 1 до 999. При создании привязки все существующие пользователи с этим telegram-ником будут обновлены на новый номер (если номер не занят в их мероприятиях).
               </p>
             </div>
             <div className="flex justify-end space-x-2">

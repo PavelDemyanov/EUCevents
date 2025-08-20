@@ -85,6 +85,7 @@ export interface IStorage {
   
   // Telegram nicknames operations
   getExistingTelegramNicknames(): Promise<string[]>;
+  getUsersByTelegramNickname(telegramNickname: string): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -413,7 +414,52 @@ export class DatabaseStorage implements IStorage {
       .insert(fixedNumberBindings)
       .values(binding)
       .returning();
+    
+    // Update all existing users with this telegram nickname to use the fixed number
+    await this.updateUsersWithFixedNumber(binding.telegramNickname, binding.participantNumber);
+    
     return created;
+  }
+
+  async updateUsersWithFixedNumber(telegramNickname: string, participantNumber: number): Promise<void> {
+    // Find all users with this telegram nickname
+    const usersToUpdate = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.telegramNickname, telegramNickname),
+          eq(users.isActive, true)
+        )
+      );
+
+    // Update each user's participant number
+    for (const user of usersToUpdate) {
+      // Check if the target number is already taken by someone else in the same event
+      const conflictingUsers = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.eventId, user.eventId),
+            eq(users.participantNumber, participantNumber),
+            ne(users.id, user.id),
+            eq(users.isActive, true)
+          )
+        );
+
+      if (conflictingUsers.length === 0) {
+        // Safe to update - no conflicts
+        await db
+          .update(users)
+          .set({
+            participantNumber,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
+      }
+      // If there's a conflict, we skip this user - they'll get the fixed number on next registration
+    }
   }
 
   async deleteFixedNumberBinding(id: number): Promise<void> {
@@ -484,6 +530,18 @@ export class DatabaseStorage implements IStorage {
     return result
       .map(row => row.telegramNickname)
       .filter(nickname => nickname !== null) as string[];
+  }
+
+  async getUsersByTelegramNickname(telegramNickname: string): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.telegramNickname, telegramNickname),
+          eq(users.isActive, true)
+        )
+      );
   }
 }
 

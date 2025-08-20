@@ -418,8 +418,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fixed-bindings", requireAuth, async (req, res) => {
     try {
       const bindingData = insertFixedNumberBindingSchema.parse(req.body);
+      
+      // Count existing users that will be updated
+      const existingUsers = await storage.getUsersByTelegramNickname(bindingData.telegramNickname);
+      
       const binding = await storage.createFixedNumberBinding(bindingData);
-      res.json(binding);
+      
+      res.json({ 
+        binding, 
+        updatedUsersCount: existingUsers.length,
+        message: existingUsers.length > 0 
+          ? `Привязка создана. Обновлено ${existingUsers.length} существующих пользователей.`
+          : "Привязка создана."
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка создания привязки номера" });
     }
