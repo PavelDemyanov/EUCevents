@@ -1,6 +1,7 @@
 import {
   users,
   events,
+  eventChats,
   bots,
   chats,
   reservedNumbers,
@@ -10,6 +11,8 @@ import {
   type InsertUser,
   type Event,
   type InsertEvent,
+  type EventChat,
+  type InsertEventChat,
   type Bot,
   type InsertBot,
   type Chat,
@@ -44,10 +47,16 @@ export interface IStorage {
   getEventByShareCode(shareCode: string): Promise<Event | undefined>;
   getActiveEvents(): Promise<Event[]>;
   getActiveEventsByChatId(chatId: number): Promise<Event[]>;
-  createEvent(event: InsertEvent): Promise<Event>;
+  createEvent(event: InsertEvent, chatIds: number[]): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event>;
+  updateEventChats(eventId: number, chatIds: number[]): Promise<void>;
   deleteEvent(id: number): Promise<void>;
   generateShareCode(eventId: number): Promise<string>;
+  
+  // Event-Chat operations
+  getEventChats(eventId: number): Promise<Chat[]>;
+  addEventChat(eventId: number, chatId: number): Promise<EventChat>;
+  removeEventChat(eventId: number, chatId: number): Promise<void>;
 
   // Bot operations
   getBots(): Promise<Bot[]>;
@@ -247,34 +256,63 @@ export class DatabaseStorage implements IStorage {
 
   // Event operations
   async getEvents(): Promise<EventWithStats[]> {
-    const result = await db
+    const eventsData = await db
       .select({
-        event: events,
-        chat: chats,
-        bot: bots,
-        participantCount: sql<number>`COUNT(CASE WHEN ${users.isActive} = true THEN 1 END)`,
-        monowheelCount: sql<number>`COUNT(CASE WHEN ${users.transportType} = 'monowheel' AND ${users.isActive} = true THEN 1 END)`,
-        scooterCount: sql<number>`COUNT(CASE WHEN ${users.transportType} = 'scooter' AND ${users.isActive} = true THEN 1 END)`,
-        spectatorCount: sql<number>`COUNT(CASE WHEN ${users.transportType} = 'spectator' AND ${users.isActive} = true THEN 1 END)`,
+        id: events.id,
+        name: events.name,
+        location: events.location,
+        datetime: events.datetime,
+        shareCode: events.shareCode,
+        isActive: events.isActive,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt,
+        participantCount: sql<number>`CAST(COUNT(CASE WHEN ${users.isActive} = true THEN 1 END) AS INTEGER)`,
+        monowheelCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'monowheel' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`,
+        scooterCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'scooter' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`,
+        spectatorCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'spectator' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`
       })
       .from(events)
-      .leftJoin(chats, eq(events.chatId, chats.id))
-      .leftJoin(bots, eq(chats.botId, bots.id))
-      .leftJoin(users, eq(events.id, users.eventId))
-      .groupBy(events.id, chats.id, bots.id)
+      .leftJoin(users, eq(users.eventId, events.id))
+      .groupBy(events.id)
       .orderBy(desc(events.createdAt));
 
-    return result.map(row => ({
-      ...row.event,
-      participantCount: Number(row.participantCount),
-      monowheelCount: Number(row.monowheelCount),
-      scooterCount: Number(row.scooterCount),
-      spectatorCount: Number(row.spectatorCount),
-      chat: {
-        ...row.chat!,
-        bot: row.bot!,
-      },
-    }));
+    // Get chats for each event separately
+    const eventsWithChats = await Promise.all(
+      eventsData.map(async (event) => {
+        const eventChatsData = await db
+          .select({
+            chat: {
+              id: chats.id,
+              chatId: chats.chatId,
+              botId: chats.botId,
+              title: chats.title,
+              isActive: chats.isActive,
+              createdAt: chats.createdAt
+            },
+            bot: {
+              id: bots.id,
+              token: bots.token,
+              name: bots.name,
+              isActive: bots.isActive,
+              createdAt: bots.createdAt
+            }
+          })
+          .from(eventChats)
+          .innerJoin(chats, eq(chats.id, eventChats.chatId))
+          .innerJoin(bots, eq(bots.id, chats.botId))
+          .where(eq(eventChats.eventId, event.id));
+
+        return {
+          ...event,
+          chats: eventChatsData.map(item => ({
+            ...item.chat,
+            bot: item.bot
+          }))
+        };
+      })
+    );
+
+    return eventsWithChats as EventWithStats[];
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
@@ -296,14 +334,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveEventsByChatId(chatId: number): Promise<Event[]> {
-    return await db
-      .select()
+    const result = await db
+      .select({
+        id: events.id,
+        name: events.name,
+        location: events.location,
+        datetime: events.datetime,
+        shareCode: events.shareCode,
+        isActive: events.isActive,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt
+      })
       .from(events)
-      .where(and(eq(events.chatId, chatId), eq(events.isActive, true)))
+      .innerJoin(eventChats, eq(eventChats.eventId, events.id))
+      .where(and(eq(eventChats.chatId, chatId), eq(events.isActive, true)))
       .orderBy(events.datetime);
+    
+    return result;
   }
 
-  async createEvent(event: InsertEvent): Promise<Event> {
+  async createEvent(event: InsertEvent, chatIds: number[] = []): Promise<Event> {
     const shareCode = this.generateRandomShareCode();
     const [createdEvent] = await db
       .insert(events)
@@ -313,6 +363,12 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .returning();
+    
+    // Add chat associations
+    if (chatIds.length > 0) {
+      await this.updateEventChats(createdEvent.id, chatIds);
+    }
+    
     return createdEvent;
   }
 
@@ -349,6 +405,50 @@ export class DatabaseStorage implements IStorage {
     const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     return `${part1}-${part2}-${part3}`;
+  }
+
+  // Event-Chat operations
+  async getEventChats(eventId: number): Promise<Chat[]> {
+    const eventChatsData = await db
+      .select({
+        id: chats.id,
+        chatId: chats.chatId,
+        botId: chats.botId,
+        title: chats.title,
+        isActive: chats.isActive,
+        createdAt: chats.createdAt
+      })
+      .from(eventChats)
+      .innerJoin(chats, eq(chats.id, eventChats.chatId))
+      .where(eq(eventChats.eventId, eventId));
+    
+    return eventChatsData;
+  }
+
+  async addEventChat(eventId: number, chatId: number): Promise<EventChat> {
+    const [eventChat] = await db
+      .insert(eventChats)
+      .values({ eventId, chatId })
+      .returning();
+    return eventChat;
+  }
+
+  async removeEventChat(eventId: number, chatId: number): Promise<void> {
+    await db
+      .delete(eventChats)
+      .where(and(eq(eventChats.eventId, eventId), eq(eventChats.chatId, chatId)));
+  }
+
+  async updateEventChats(eventId: number, chatIds: number[]): Promise<void> {
+    // Remove all existing event-chat associations
+    await db.delete(eventChats).where(eq(eventChats.eventId, eventId));
+    
+    // Add new associations
+    if (chatIds.length > 0) {
+      await db.insert(eventChats).values(
+        chatIds.map(chatId => ({ eventId, chatId }))
+      );
+    }
   }
 
   // Bot operations

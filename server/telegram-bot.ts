@@ -13,6 +13,8 @@ interface UserRegistrationState {
   existingData?: {
     fullName: string;
     phone: string;
+    transportType?: 'monowheel' | 'scooter' | 'spectator';
+    transportModel?: string;
   };
 }
 
@@ -1039,6 +1041,59 @@ export async function sendEventNotificationToGroup(
   } catch (error) {
     console.error(`Failed to send notification to group ${chatId}:`, error);
     throw error;
+  }
+}
+
+export async function sendGroupNotification(
+  storage: IStorage,
+  eventId: number,
+  message: string,
+  buttons?: { text: string; callback_data: string }[][]
+) {
+  try {
+    const event = await storage.getEvent(eventId);
+    if (!event) {
+      console.error('Event not found');
+      return;
+    }
+
+    // Get all chats associated with this event
+    const eventChats = await storage.getEventChats(eventId);
+    if (eventChats.length === 0) {
+      console.error('No chats found for event');
+      return;
+    }
+
+    const messageOptions: any = {
+      parse_mode: 'HTML',
+    };
+
+    if (buttons) {
+      messageOptions.reply_markup = {
+        inline_keyboard: buttons,
+      };
+    }
+
+    // Send notification to all associated chats
+    const notificationPromises = eventChats.map(async (chat) => {
+      try {
+        const botData = await storage.getBot(chat.botId);
+        if (!botData) {
+          console.error(`Bot not found for chat ${chat.id}`);
+          return;
+        }
+
+        const bot = new TelegramBot(botData.token);
+        await bot.sendMessage(chat.chatId, message, messageOptions);
+        console.log(`Group notification sent successfully to chat ${chat.chatId}`);
+      } catch (error) {
+        console.error(`Error sending to chat ${chat.chatId}:`, error);
+      }
+    });
+
+    await Promise.all(notificationPromises);
+  } catch (error) {
+    console.error('Error sending group notification:', error);
   }
 }
 

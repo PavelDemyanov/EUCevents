@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2 } from "lucide-react";
@@ -26,7 +27,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     name: "",
     location: "",
     datetime: "",
-    chatId: 1
+    chatIds: [] as number[]
   });
   
   const { toast } = useToast();
@@ -55,7 +56,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowCreateDialog(false);
-      setNewEvent({ name: "", location: "", datetime: "", chatId: 1 });
+      setNewEvent({ name: "", location: "", datetime: "", chatIds: [] });
       toast({
         title: "Успешно",
         description: "Мероприятие создано",
@@ -131,11 +132,22 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       });
       return;
     }
+    if (newEvent.chatIds.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите хотя бы один чат",
+        variant: "destructive",
+      });
+      return;
+    }
     createEventMutation.mutate(newEvent);
   };
 
   const handleEditEvent = (event: EventWithStats) => {
-    setEditingEvent(event);
+    setEditingEvent({
+      ...event,
+      chatIds: event.chats?.map(chat => chat.id) || []
+    });
     setShowEditDialog(true);
   };
 
@@ -149,7 +161,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
         name: editingEvent.name,
         location: editingEvent.location,
         datetime: editingEvent.datetime,
-        chatId: editingEvent.chatId,
+        chatIds: editingEvent.chatIds || [],
         isActive: editingEvent.isActive,
       },
     });
@@ -421,26 +433,33 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
               />
             </div>
             <div>
-              <Label htmlFor="chat">Telegram-чат</Label>
-              <select
-                id="chat"
-                value={newEvent.chatId}
-                onChange={(e) => setNewEvent({ ...newEvent, chatId: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
+              <Label>Telegram-чаты</Label>
+              <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
                 {chats.length === 0 ? (
-                  <option value="">Нет доступных чатов</option>
+                  <p className="text-gray-500 text-sm">Нет доступных чатов</p>
                 ) : (
                   chats.map((chat: any) => (
-                    <option key={chat.id} value={chat.id}>
-                      {chat.title} (ID: {chat.chatId})
-                    </option>
+                    <div key={chat.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`chat-${chat.id}`}
+                        checked={newEvent.chatIds.includes(chat.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setNewEvent({ ...newEvent, chatIds: [...newEvent.chatIds, chat.id] });
+                          } else {
+                            setNewEvent({ ...newEvent, chatIds: newEvent.chatIds.filter(id => id !== chat.id) });
+                          }
+                        }}
+                      />
+                      <label htmlFor={`chat-${chat.id}`} className="text-sm cursor-pointer">
+                        {chat.title} (ID: {chat.chatId})
+                      </label>
+                    </div>
                   ))
                 )}
-              </select>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Настройте чаты в разделе "Настройки"
+                Выберите чаты для уведомлений. Настройте чаты в разделе "Настройки"
               </p>
             </div>
             <div className="flex justify-end space-x-2">
@@ -501,20 +520,35 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-chat">Telegram-чат</Label>
-                <select
-                  id="edit-chat"
-                  value={editingEvent.chatId}
-                  onChange={(e) => setEditingEvent({ ...editingEvent, chatId: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                >
-                  {chats.map((chat: any) => (
-                    <option key={chat.id} value={chat.id}>
-                      {chat.title} (ID: {chat.chatId})
-                    </option>
-                  ))}
-                </select>
+                <Label>Telegram-чаты</Label>
+                <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
+                  {chats.length === 0 ? (
+                    <p className="text-gray-500 text-sm">Нет доступных чатов</p>
+                  ) : (
+                    chats.map((chat: any) => (
+                      <div key={chat.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-chat-${chat.id}`}
+                          checked={editingEvent.chatIds?.includes(chat.id) || false}
+                          onCheckedChange={(checked) => {
+                            const currentChatIds = editingEvent.chatIds || [];
+                            if (checked) {
+                              setEditingEvent({ ...editingEvent, chatIds: [...currentChatIds, chat.id] });
+                            } else {
+                              setEditingEvent({ ...editingEvent, chatIds: currentChatIds.filter(id => id !== chat.id) });
+                            }
+                          }}
+                        />
+                        <label htmlFor={`edit-chat-${chat.id}`} className="text-sm cursor-pointer">
+                          {chat.title} (ID: {chat.chatId})
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Выберите чаты для уведомлений. Настройте чаты в разделе "Настройки"
+                </p>
               </div>
               <div className="flex items-center space-x-2">
                 <input

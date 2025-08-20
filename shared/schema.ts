@@ -57,12 +57,22 @@ export const events = pgTable("events", {
   name: text("name").notNull(),
   location: text("location").notNull(),
   datetime: timestamp("datetime").notNull(),
-  chatId: integer("chat_id").notNull(),
   shareCode: varchar("share_code", { length: 50 }).unique(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Event chats relation table (many-to-many)
+export const eventChats = pgTable("event_chats", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  chatId: integer("chat_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Prevent duplicate event-chat pairs
+  eventChatUnique: unique().on(table.eventId, table.chatId)
+}));
 
 // Reserved numbers table for excluding specific numbers from auto-assignment
 export const reservedNumbers = pgTable("reserved_numbers", {
@@ -97,17 +107,25 @@ export const usersRelations = relations(users, ({ one }) => ({
   }),
 }));
 
-export const eventsRelations = relations(events, ({ many, one }) => ({
+export const eventsRelations = relations(events, ({ many }) => ({
   participants: many(users),
   reservedNumbers: many(reservedNumbers),
+  eventChats: many(eventChats),
+}));
+
+export const eventChatsRelations = relations(eventChats, ({ one }) => ({
+  event: one(events, {
+    fields: [eventChats.eventId],
+    references: [events.id],
+  }),
   chat: one(chats, {
-    fields: [events.chatId],
+    fields: [eventChats.chatId],
     references: [chats.id],
   }),
 }));
 
 export const chatsRelations = relations(chats, ({ many, one }) => ({
-  events: many(events),
+  eventChats: many(eventChats),
   bot: one(bots, {
     fields: [chats.botId],
     references: [bots.id],
@@ -147,9 +165,12 @@ export const insertEventSchema = createInsertSchema(events, {
   datetime: z.string().transform((str) => new Date(str)),
 }).omit({
   id: true,
+  shareCode: true,
   createdAt: true,
   updatedAt: true,
 });
+
+
 
 export const insertBotSchema = createInsertSchema(bots, {
   token: z.string().min(10, "Токен бота обязателен"),
@@ -162,6 +183,14 @@ export const insertBotSchema = createInsertSchema(bots, {
 export const insertChatSchema = createInsertSchema(chats, {
   chatId: z.string().min(1, "ID чата обязателен"),
   title: z.string().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEventChatSchema = createInsertSchema(eventChats, {
+  eventId: z.number(),
+  chatId: z.number(),
 }).omit({
   id: true,
   createdAt: true,
@@ -189,6 +218,8 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type EventChat = typeof eventChats.$inferSelect;
+export type InsertEventChat = z.infer<typeof insertEventChatSchema>;
 export type Bot = typeof bots.$inferSelect;
 export type InsertBot = z.infer<typeof insertBotSchema>;
 export type Chat = typeof chats.$inferSelect;
@@ -206,7 +237,7 @@ export type EventWithStats = Event & {
   monowheelCount: number;
   scooterCount: number;
   spectatorCount: number;
-  chat: Chat & { bot: Bot };
+  chats: Array<Chat & { bot: Bot }>;
 };
 
 // User with event data type

@@ -130,8 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/events", requireAuth, async (req, res) => {
     try {
-      const eventData = insertEventSchema.parse(req.body);
-      const event = await storage.createEvent(eventData);
+      const { chatIds, ...eventData } = req.body;
+      if (!chatIds || !Array.isArray(chatIds) || chatIds.length === 0) {
+        return res.status(400).json({ message: "Выберите хотя бы один чат" });
+      }
+      const event = await storage.createEvent(eventData, chatIds.map(id => parseInt(id)));
       res.json(event);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка создания мероприятия" });
@@ -141,8 +144,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/events/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = insertEventSchema.partial().parse(req.body);
-      const event = await storage.updateEvent(id, updates);
+      const { chatIds, ...eventUpdates } = req.body;
+      
+      // Update event data
+      if (Object.keys(eventUpdates).length > 0) {
+        await storage.updateEvent(id, eventUpdates);
+      }
+      
+      // Update chat associations if provided
+      if (chatIds && Array.isArray(chatIds)) {
+        await storage.updateEventChats(id, chatIds.map(chatId => parseInt(chatId)));
+      }
+      
+      const event = await storage.getEvent(id);
       res.json(event);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Ошибка обновления мероприятия" });
@@ -391,26 +405,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getEvents();
       const eventWithStats = events.find(e => e.id === eventId);
       
-      if (!eventWithStats || !eventWithStats.chat) {
-        return res.status(404).json({ message: "Мероприятие или чат не найдены" });
+      if (!eventWithStats || !eventWithStats.chats || eventWithStats.chats.length === 0) {
+        return res.status(404).json({ message: "Мероприятие или чаты не найдены" });
       }
 
-      // Get bot instance - we need to pass it from somewhere
-      // For now, get the first active bot from storage
-      const bots = await storage.getBots();
-      const activeBot = bots.find(b => b.id === eventWithStats.chat.botId && b.isActive);
-      
-      if (!activeBot) {
-        return res.status(400).json({ message: "Бот не активен" });
-      }
-
-      // Create temporary bot instance for notification
+      // Send to all chats associated with event
       const TelegramBot = (await import('node-telegram-bot-api')).default;
-      const tempBot = new TelegramBot(activeBot.token);
-
-      // Send notification to group
       const { sendEventNotificationToGroup } = await import('./telegram-bot');
-      await sendEventNotificationToGroup(tempBot, eventWithStats.chat.chatId, {
+      
+      for (const chat of eventWithStats.chats) {
+        const bot = chat.bot;
+        if (!bot.isActive) continue;
+        
+        const tempBot = new TelegramBot(bot.token);
+        await sendEventNotificationToGroup(tempBot, chat.chatId, {
         name: eventWithStats.name,
         location: eventWithStats.location,
         datetime: eventWithStats.datetime,
@@ -418,7 +426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scooterCount: eventWithStats.scooterCount,
         spectatorCount: eventWithStats.spectatorCount,
         totalCount: eventWithStats.participantCount,
-      });
+        });
+      }
 
       res.json({ success: true });
     } catch (error) {
