@@ -150,7 +150,7 @@ export class DatabaseStorage implements IStorage {
             );
           
           if (existingUserWithNumber.length === 0) {
-            finalUpdates.participantNumber = fixedBinding.participantNumber;
+            (finalUpdates as any).participantNumber = fixedBinding.participantNumber;
           }
         }
       }

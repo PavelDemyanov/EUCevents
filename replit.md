@@ -48,3 +48,10 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 - **Fonts**: Google Fonts (Inter, DM Sans, Fira Code, Geist Mono, Architects Daughter)
 - **Build Tools**: Vite for frontend bundling, esbuild for server bundling
 - **Validation**: Zod for runtime type validation and schema definition
+
+### Recent Updates (August 20, 2025)
+
+- **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
+- **Public Pages**: Created public event view without phone numbers and admin functions
+- **Database Schema**: Added shareCode field to events table for public sharing
+- **Share Button**: Added "Поделиться" button on participants page that opens public link in new window
