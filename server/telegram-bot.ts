@@ -151,7 +151,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
-            `📱 Телефон: ${lastRegistration.phone}\n` +
+            `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
             transportInfo + 
             `\nИспользовать эти данные для регистрации?`,
             {
@@ -256,7 +256,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `Вы выбрали: "${event.name}"\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
-            `📱 Телефон: ${lastRegistration.phone}\n` +
+            `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
             transportInfo + 
             `\nИспользовать эти данные для регистрации?`,
             {
@@ -327,7 +327,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 `⚠️ Вы уже зарегистрированы на это мероприятие!\n\n` +
                 `📋 Ваши данные:\n` +
                 `👤 ФИО: ${existingRegistration.fullName}\n` +
-                `📱 Телефон: ${existingRegistration.phone}\n` +
+                `📱 Телефон: ${formatPhoneNumber(existingRegistration.phone)}\n` +
                 `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
                 `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
                 `Если хотите изменить данные, напишите мне снова.`
@@ -351,7 +351,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 `📋 Ваши данные:\n` +
                 `📅 Мероприятие: ${event?.name}\n` +
                 `👤 ФИО: ${updatedUser.fullName}\n` +
-                `📱 Телефон: ${updatedUser.phone}\n` +
+                `📱 Телефон: ${formatPhoneNumber(updatedUser.phone)}\n` +
                 `🚗 Транспорт: ${getTransportTypeLabel(updatedUser.transportType)}${updatedUser.transportModel ? ` (${updatedUser.transportModel})` : ''}\n` +
                 `🏷️ Ваш номер участника: ${updatedUser.participantNumber}\n\n` +
                 `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
@@ -387,7 +387,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               `📋 Ваши данные:\n` +
               `📅 Мероприятие: ${event?.name}\n` +
               `👤 ФИО: ${user.fullName}\n` +
-              `📱 Телефон: ${user.phone}\n` +
+              `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
               `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}${user.transportModel ? ` (${user.transportModel})` : ''}\n` +
               `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
               `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
@@ -787,7 +787,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `📋 Ваши данные:\n` +
             `📅 Мероприятие: ${event?.name}\n` +
             `👤 ФИО: ${user.fullName}\n` +
-            `📱 Телефон: ${user.phone}\n` +
+            `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
             `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}\n` +
             `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
             `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
@@ -827,23 +827,23 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         return bot.sendMessage(
           chatId,
-          "Спасибо! Теперь введите ваш номер телефона в формате:\n+7 (XXX) XXX-XX-XX"
+          "Спасибо! Теперь введите ваш номер телефона:\nМожно в любом формате: 8XXXXXXXXXX, +7XXXXXXXXXX или 7XXXXXXXXXX"
         );
       }
 
       if (state.step === 'phone') {
-        const phoneRegex = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
-        if (!phoneRegex.test(text)) {
+        const normalizedPhone = normalizePhoneNumber(text);
+        if (!normalizedPhone) {
           return bot.sendMessage(
             chatId,
-            "Неверный формат телефона. Используйте формат: +7 (XXX) XXX-XX-XX\nПопробуйте ещё раз:"
+            "Неверный формат телефона. Введите российский номер:\n8XXXXXXXXXX, +7XXXXXXXXXX или 7XXXXXXXXXX\nПопробуйте ещё раз:"
           );
         }
 
         userStates.set(telegramId, {
           ...state,
           step: 'transport_type',
-          phone: text,
+          phone: normalizedPhone,
         });
 
         return bot.sendMessage(
@@ -903,7 +903,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               `🎉 Регистрация успешна!\n\n` +
               `📋 Ваши данные обновлены:\n` +
               `👤 ФИО: ${state.fullName}\n` +
-              `📱 Телефон: ${state.phone}\n` +
+              `📱 Телефон: ${formatPhoneNumber(state.phone)}\n` +
               `🚗 Транспорт: ${getTransportTypeLabel(state.transportType!)} (${text})\n` +
               `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`
             );
@@ -930,7 +930,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `📋 Ваши данные:\n` +
             `📅 Мероприятие: ${event?.name}\n` +
             `👤 ФИО: ${user.fullName}\n` +
-            `📱 Телефон: ${user.phone}\n` +
+            `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
             `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)} (${user.transportModel})\n` +
             `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
             `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
@@ -955,11 +955,11 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       }
 
       if (state.step === 'edit_phone') {
-        const phoneRegex = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
-        if (!phoneRegex.test(text)) {
+        const normalizedPhone = normalizePhoneNumber(text);
+        if (!normalizedPhone) {
           return bot.sendMessage(
             chatId,
-            "Неверный формат телефона. Используйте формат: +7 (XXX) XXX-XX-XX\nПопробуйте ещё раз:"
+            "Неверный формат телефона. Введите российский номер:\n8XXXXXXXXXX, +7XXXXXXXXXX или 7XXXXXXXXXX\nПопробуйте ещё раз:"
           );
         }
 
@@ -967,9 +967,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
         
         if (userRegistration) {
-          await storage.updateUser(userRegistration.id, { phone: text });
+          await storage.updateUser(userRegistration.id, { phone: normalizedPhone });
           userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `Телефон успешно изменён на: ${text}`);
+          return bot.sendMessage(chatId, `Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
         }
       }
 
@@ -1045,6 +1045,50 @@ function getTransportTypeLabel(type: string): string {
     case 'spectator': return 'Зритель';
     default: return type;
   }
+}
+
+// Normalize phone number to format 7XXXXXXXXXX
+function normalizePhoneNumber(phone: string): string | null {
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, '');
+  
+  // Check if it's a valid Russian number
+  if (digits.length === 11) {
+    if (digits.startsWith('8')) {
+      // 8XXXXXXXXXX -> 7XXXXXXXXXX
+      return '7' + digits.substring(1);
+    } else if (digits.startsWith('7')) {
+      // 7XXXXXXXXXX -> 7XXXXXXXXXX
+      return digits;
+    }
+  } else if (digits.length === 10) {
+    // XXXXXXXXXX -> 7XXXXXXXXXX (assume it's without country code)
+    return '7' + digits;
+  }
+  
+  return null;
+}
+
+// Format phone number for display: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
+function formatPhoneNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  // If already formatted, return as is
+  if (phone.includes('(') && phone.includes(')')) {
+    return phone;
+  }
+  
+  // Normalize first
+  const normalized = normalizePhoneNumber(phone);
+  if (!normalized) return phone;
+  
+  // Format: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
+  const match = normalized.match(/^7(\d{3})(\d{3})(\d{2})(\d{2})$/);
+  if (match) {
+    return `+7 (${match[1]}) ${match[2]}-${match[3]}-${match[4]}`;
+  }
+  
+  return phone;
 }
 
 function formatDateTime(date: Date): string {
