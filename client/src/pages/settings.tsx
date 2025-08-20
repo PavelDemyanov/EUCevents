@@ -69,6 +69,11 @@ export default function Settings() {
     queryKey: ["/api/telegram-nicknames"],
   });
 
+  // Query for users (including those without telegram nicknames)
+  const { data: usersForBinding = [], isLoading: usersLoading } = useQuery({
+    queryKey: ["/api/users-for-binding"],
+  });
+
   const { data: admins = [], isLoading: adminsLoading } = useQuery({
     queryKey: ["/api/admins"],
   });
@@ -277,7 +282,7 @@ export default function Settings() {
     try {
       setCheckingConflicts(true);
       const response = await apiRequest(`/api/fixed-bindings/check-conflicts/${participantNumber}`);
-      setNumberConflicts(response.conflicts || []);
+      setNumberConflicts((response as any)?.conflicts || []);
     } catch (error) {
       console.error("Ошибка проверки конфликтов:", error);
       setNumberConflicts([]);
@@ -693,12 +698,12 @@ export default function Settings() {
                     onChange={(e) => setNewBinding({ ...newBinding, telegramNickname: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     required
-                    disabled={nicknamesLoading}
+                    disabled={usersLoading}
                   >
-                    <option value="">Выберите telegram-ник</option>
-                    {(telegramNicknames as string[]).map((nickname: string) => (
-                      <option key={nickname} value={nickname}>
-                        @{nickname}
+                    <option value="">Выберите пользователя</option>
+                    {(usersForBinding as any[]).map((user: any) => (
+                      <option key={user.telegramNickname || user.fullName} value={user.telegramNickname || user.fullName}>
+                        {user.displayName}
                       </option>
                     ))}
                   </select>

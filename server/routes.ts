@@ -551,8 +551,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if this number is already bound to another user
       const existingBinding = await storage.getFixedNumberByParticipantNumber(bindingData.participantNumber);
       if (existingBinding && existingBinding.telegramNickname !== bindingData.telegramNickname) {
-        // Delete the old binding first
-        await storage.deleteFixedNumberBinding(existingBinding.id);
+        return res.status(400).json({ 
+          message: `Номер ${bindingData.participantNumber} уже привязан к пользователю @${existingBinding.telegramNickname}. Дублирование статичных номеров недопустимо.`,
+          conflictWith: existingBinding.telegramNickname
+        });
       }
       
       const binding = await storage.createFixedNumberBinding(bindingData);
@@ -657,6 +659,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(nicknames);
     } catch (error) {
       res.status(500).json({ message: "Ошибка получения telegram-ников" });
+    }
+  });
+
+  // Get users for binding options (includes users without telegram nicknames)
+  app.get("/api/users-for-binding", requireAuth, async (req, res) => {
+    try {
+      const users = await storage.getUsersForBindingOptions();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка получения пользователей" });
     }
   });
 

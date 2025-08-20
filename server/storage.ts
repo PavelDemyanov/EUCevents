@@ -809,6 +809,23 @@ export class DatabaseStorage implements IStorage {
       .filter(nickname => nickname !== null) as string[];
   }
 
+  async getUsersForBindingOptions(): Promise<Array<{telegramNickname: string | null; fullName: string; displayName: string}>> {
+    const result = await db
+      .selectDistinct({ 
+        telegramNickname: users.telegramNickname, 
+        fullName: users.fullName 
+      })
+      .from(users)
+      .where(eq(users.isActive, true))
+      .orderBy(users.fullName);
+    
+    return result.map(row => ({
+      telegramNickname: row.telegramNickname,
+      fullName: row.fullName,
+      displayName: row.telegramNickname ? `@${row.telegramNickname}` : row.fullName
+    }));
+  }
+
   async getUsersByTelegramNickname(telegramNickname: string): Promise<User[]> {
     return await db
       .select()
