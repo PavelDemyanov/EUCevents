@@ -19,6 +19,7 @@ function Dashboard() {
   const [currentPage, setCurrentPage] = useState<"events" | "participants" | "settings">("events");
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedEventName, setSelectedEventName] = useState<string>("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logout = useLogout();
   const { user } = useAuth();
 
@@ -26,6 +27,7 @@ function Dashboard() {
     setSelectedEventId(eventId);
     setSelectedEventName(eventName || "");
     setCurrentPage("participants");
+    setMobileMenuOpen(false); // Close mobile menu when navigating
   };
 
   const handleBackToEvents = () => {
@@ -40,18 +42,48 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white shadow-sm border-b">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center">
+            <div className="bg-primary/10 w-8 h-8 rounded-lg flex items-center justify-center mr-3">
+              <Users className="text-primary h-5 w-5" />
+            </div>
+            <span className="font-semibold text-gray-900 text-sm">Управление</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="h-10 w-10"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
-        <div className="flex items-center h-16 px-6 border-b">
+      <div className={`fixed inset-y-0 left-0 z-50 w-52 md:w-52 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
+        <div className="flex items-center h-16 px-4 border-b">
           <div className="bg-primary/10 w-8 h-8 rounded-lg flex items-center justify-center mr-3">
             <Users className="text-primary h-5 w-5" />
           </div>
-          <span className="font-semibold text-gray-900">Управление мероприятиями</span>
+          <span className="font-semibold text-gray-900 text-sm">Управление мероприятиями</span>
         </div>
         
         <nav className="mt-6">
           <button
-            onClick={() => setCurrentPage("events")}
+            onClick={() => {
+              setCurrentPage("events");
+              setMobileMenuOpen(false);
+            }}
             className={`sidebar-link w-full text-left ${
               currentPage === "events" ? "sidebar-link-active" : ""
             }`}
@@ -61,7 +93,10 @@ function Dashboard() {
           </button>
           {selectedEventId && (
             <button
-              onClick={() => setCurrentPage("participants")}
+              onClick={() => {
+                setCurrentPage("participants");
+                setMobileMenuOpen(false);
+              }}
               className={`sidebar-link w-full text-left ${
                 currentPage === "participants" ? "sidebar-link-active" : ""
               }`}
@@ -78,8 +113,13 @@ function Dashboard() {
             </button>
           )}
           <button 
-            className="sidebar-link w-full text-left"
-            onClick={() => setCurrentPage("settings")}
+            className={`sidebar-link w-full text-left ${
+              currentPage === "settings" ? "sidebar-link-active" : ""
+            }`}
+            onClick={() => {
+              setCurrentPage("settings");
+              setMobileMenuOpen(false);
+            }}
           >
             <SettingsIcon className="w-5 h-5 mr-3" />
             Настройки
@@ -100,16 +140,18 @@ function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="pl-64">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b h-16 flex items-center justify-between px-6">
-          <h1 className="text-xl font-semibold text-gray-900">
-            {currentPage === "events" ? "Мероприятия" : 
-             currentPage === "participants" ? "Участники мероприятия" :
-             "Настройки системы"}
-          </h1>
-          <div className="text-sm text-gray-600">
-            Администратор: <span className="font-medium">{user?.username}</span>
+      <div className="md:pl-52 pt-16 md:pt-0">
+        {/* Header - Hidden on mobile */}
+        <header className="hidden md:block bg-white shadow-sm border-b h-16">
+          <div className="flex items-center justify-between px-6 h-full">
+            <h1 className="text-xl font-semibold text-gray-900">
+              {currentPage === "events" ? "Мероприятия" : 
+               currentPage === "participants" ? "Участники мероприятия" :
+               "Настройки системы"}
+            </h1>
+            <div className="text-sm text-gray-600">
+              Администратор: <span className="font-medium">{user?.username}</span>
+            </div>
           </div>
         </header>
 

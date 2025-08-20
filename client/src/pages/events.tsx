@@ -205,32 +205,37 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const todayRegistrations = (todayStats as any)?.todayRegistrations || 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      {/* Mobile Title */}
+      <div className="md:hidden">
+        <h1 className="text-2xl font-bold text-gray-900">Мероприятия</h1>
+      </div>
+
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             <div className="flex items-center">
-              <div className="stats-card-blue p-3 rounded-lg">
-                <Calendar className="h-6 w-6" />
+              <div className="stats-card-blue p-2 md:p-3 rounded-lg">
+                <Calendar className="h-4 w-4 md:h-6 md:w-6" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Всего мероприятий</p>
-                <p className="text-2xl font-bold text-gray-900">{totalEvents}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-xs md:text-sm text-gray-600">Мероприятий</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{totalEvents}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             <div className="flex items-center">
-              <div className="stats-card-green p-3 rounded-lg">
-                <Users className="h-6 w-6" />
+              <div className="stats-card-green p-2 md:p-3 rounded-lg">
+                <Users className="h-4 w-4 md:h-6 md:w-6" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Активных участников</p>
-                <p className="text-2xl font-bold text-gray-900">{totalParticipants}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-xs md:text-sm text-gray-600">Участников</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{totalParticipants}</p>
               </div>
             </div>
           </CardContent>
@@ -268,10 +273,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       {/* Events Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Список мероприятий</CardTitle>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle className="text-lg md:text-xl">Список мероприятий</CardTitle>
             <Button 
-              className="gap-2"
+              className="gap-2 w-full md:w-auto"
               onClick={() => setShowCreateDialog(true)}
             >
               <Plus className="h-4 w-4" />

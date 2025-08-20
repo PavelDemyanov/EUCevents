@@ -105,7 +105,7 @@
 
 /* Custom utilities for Russian admin panel */
 .sidebar-link {
-  @apply flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors;
+  @apply flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm;
 }
 
 .sidebar-link i {

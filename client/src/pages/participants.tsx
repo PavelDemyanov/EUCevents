@@ -281,9 +281,14 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      {/* Mobile Title */}
+      <div className="md:hidden">
+        <h1 className="text-2xl font-bold text-gray-900">Участники</h1>
+      </div>
+
+      {/* Breadcrumb - Desktop only */}
+      <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600">
         <Button 
           variant="ghost" 
           size="sm" 
@@ -291,22 +296,34 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
           className="gap-1 p-0 hover:bg-transparent text-gray-600 hover:text-gray-900 text-xs sm:text-sm"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Назад к мероприятиям</span>
-          <span className="sm:hidden">Назад</span>
+          Назад к мероприятиям
         </Button>
         <span>•</span>
         <span>Участники</span>
       </div>
 
+      {/* Mobile Back Button */}
+      <div className="md:hidden">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onBack}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Назад
+        </Button>
+      </div>
+
       {/* Header */}
       <Card>
-        <CardHeader>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex flex-col gap-4">
             <div>
               {event && (
                 <div>
-                  <CardTitle className="text-2xl mb-2">{(event as any)?.name || 'Мероприятие'}</CardTitle>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <CardTitle className="text-lg md:text-2xl mb-2">{(event as any)?.name || 'Мероприятие'}</CardTitle>
+                  <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0 text-xs md:text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       📍 {(event as any)?.location || 'Место не указано'}
                     </span>
@@ -317,50 +334,53 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                className="gap-1 text-xs md:text-sm"
                 onClick={() => notifyGroupMutation.mutate()}
                 disabled={notifyGroupMutation.isPending}
               >
                 <Bell className="h-4 w-4" />
-                Оповестить группу
+                <span className="hidden md:inline">Оповестить группу</span>
+                <span className="md:hidden">Группе</span>
               </Button>
 
-              
               <Button 
                 variant="outline" 
                 size="sm"
-                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                className="gap-1 text-xs md:text-sm"
                 onClick={() => generatePdfMutation.mutate()}
                 disabled={generatePdfMutation.isPending}
               >
                 <FileText className="h-4 w-4" />
-                {generatePdfMutation.isPending ? "Общий PDF..." : "Общий PDF"}
+                <span className="hidden md:inline">{generatePdfMutation.isPending ? "Общий PDF..." : "Общий PDF"}</span>
+                <span className="md:hidden">PDF</span>
               </Button>
               
               <Button 
                 variant="outline" 
                 size="sm"
-                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                className="gap-1 text-xs md:text-sm"
                 onClick={() => generateTransportPdfMutation.mutate()}
                 disabled={generateTransportPdfMutation.isPending}
               >
                 <FileText className="h-4 w-4" />
-                {generateTransportPdfMutation.isPending ? "По транспорту PDF..." : "По транспорту PDF"}
+                <span className="hidden md:inline">{generateTransportPdfMutation.isPending ? "По транспорту PDF..." : "По транспорту PDF"}</span>
+                <span className="md:hidden">Транспорт</span>
               </Button>
               
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                className="gap-1 text-xs md:text-sm"
                 onClick={() => generateShareLinkMutation.mutate()}
                 disabled={generateShareLinkMutation.isPending}
               >
                 <Share2 className="h-4 w-4" />
-                {generateShareLinkMutation.isPending ? "Создание..." : "Поделиться"}
+                <span className="hidden md:inline">{generateShareLinkMutation.isPending ? "Создание..." : "Поделиться"}</span>
+                <span className="md:hidden">Ссылка</span>
               </Button>
             </div>
           </div>
@@ -369,23 +389,23 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
       {/* Statistics */}
       <Card>
-        <CardContent className="p-6 bg-gray-50">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <CardContent className="p-4 md:p-6 bg-gray-50">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{monowheelCount}</div>
-              <div className="text-sm text-gray-600">Моноколёса</div>
+              <div className="text-lg md:text-2xl font-bold text-purple-600">{monowheelCount}</div>
+              <div className="text-xs md:text-sm text-gray-600">Моноколёса</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{scooterCount}</div>
-              <div className="text-sm text-gray-600">Самокаты</div>
+              <div className="text-lg md:text-2xl font-bold text-blue-600">{scooterCount}</div>
+              <div className="text-xs md:text-sm text-gray-600">Самокаты</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{spectatorCount}</div>
-              <div className="text-sm text-gray-600">Зрители</div>
+              <div className="text-lg md:text-2xl font-bold text-green-600">{spectatorCount}</div>
+              <div className="text-xs md:text-sm text-gray-600">Зрители</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-800">{activeParticipants.length}</div>
-              <div className="text-sm text-gray-600">Всего участников</div>
+              <div className="text-lg md:text-2xl font-bold text-gray-800">{activeParticipants.length}</div>
+              <div className="text-xs md:text-sm text-gray-600">Всего</div>
             </div>
           </div>
         </CardContent>
