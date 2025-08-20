@@ -814,6 +814,63 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     if (!state) return;
 
     try {
+      // Handle editing existing data FIRST (before general steps)
+      if (state.step === 'edit_full_name') {
+        if (text.length < 2) {
+          return bot.sendMessage(chatId, "ФИО должно содержать минимум 2 символа. Попробуйте ещё раз:");
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration) {
+          await storage.updateUser(userRegistration.id, { fullName: text });
+          userStates.delete(telegramId);
+          return bot.sendMessage(chatId, `✅ ФИО успешно изменено на: ${text}`);
+        }
+      }
+
+      if (state.step === 'edit_phone') {
+        const normalizedPhone = normalizePhoneNumber(text);
+        if (!normalizedPhone) {
+          return bot.sendMessage(
+            chatId,
+            "Неверный формат телефона. Введите российский номер:\n8XXXXXXXXXX, +7XXXXXXXXXX или 7XXXXXXXXXX\nПопробуйте ещё раз:"
+          );
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration) {
+          await storage.updateUser(userRegistration.id, { phone: normalizedPhone });
+          userStates.delete(telegramId);
+          return bot.sendMessage(chatId, `✅ Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
+        }
+      }
+
+      if (state.step === 'edit_transport_model') {
+        if (text.length < 2) {
+          return bot.sendMessage(chatId, "Название модели должно содержать минимум 2 символа. Попробуйте ещё раз:");
+        }
+
+        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
+        
+        if (userRegistration && state.transportType) {
+          await storage.updateUser(userRegistration.id, { 
+            transportType: state.transportType, 
+            transportModel: text 
+          });
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `✅ Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
+          );
+        }
+      }
+
+      // Handle regular registration flow
       if (state.step === 'full_name') {
         if (text.length < 2) {
           return bot.sendMessage(chatId, "ФИО должно содержать минимум 2 символа. Попробуйте ещё раз:");
@@ -840,6 +897,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
         }
 
+        // This is for new registration, continue to transport selection
         userStates.set(telegramId, {
           ...state,
           step: 'transport_type',
@@ -938,61 +996,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
       }
 
-      // Handle editing existing data
-      if (state.step === 'edit_full_name') {
-        if (text.length < 2) {
-          return bot.sendMessage(chatId, "ФИО должно содержать минимум 2 символа. Попробуйте ещё раз:");
-        }
 
-        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
-        
-        if (userRegistration) {
-          await storage.updateUser(userRegistration.id, { fullName: text });
-          userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `✅ ФИО успешно изменено на: ${text}`);
-        }
-      }
-
-      if (state.step === 'edit_phone') {
-        const normalizedPhone = normalizePhoneNumber(text);
-        if (!normalizedPhone) {
-          return bot.sendMessage(
-            chatId,
-            "Неверный формат телефона. Введите российский номер:\n8XXXXXXXXXX, +7XXXXXXXXXX или 7XXXXXXXXXX\nПопробуйте ещё раз:"
-          );
-        }
-
-        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
-        
-        if (userRegistration) {
-          await storage.updateUser(userRegistration.id, { phone: normalizedPhone });
-          userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `✅ Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
-        }
-      }
-
-      if (state.step === 'edit_transport_model') {
-        if (text.length < 2) {
-          return bot.sendMessage(chatId, "Название модели должно содержать минимум 2 символа. Попробуйте ещё раз:");
-        }
-
-        const existingUsers = await storage.getUserRegistrationsByTelegramId(telegramId);
-        const userRegistration = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
-        
-        if (userRegistration && state.transportType) {
-          await storage.updateUser(userRegistration.id, { 
-            transportType: state.transportType, 
-            transportModel: text 
-          });
-          userStates.delete(telegramId);
-          return bot.sendMessage(
-            chatId,
-            `✅ Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
-          );
-        }
-      }
     } catch (error) {
       console.error('Message handling error:', error);
       bot.sendMessage(chatId, "Произошла ошибка. Попробуйте позже.");
