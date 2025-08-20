@@ -119,8 +119,10 @@ function Dashboard() {
               <div>
                 <div>Участники</div>
                 {selectedEventName && (
-                  <div className="text-xs text-gray-500 mt-0.5 truncate">
-                    {selectedEventName}
+                  <div className="mt-1">
+                    <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full truncate max-w-full">
+                      {selectedEventName}
+                    </span>
                   </div>
                 )}
               </div>
