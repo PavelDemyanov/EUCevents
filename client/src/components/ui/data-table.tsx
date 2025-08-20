@@ -141,7 +141,7 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className="space-y-4">
       {/* Search and Filters */}
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-col md:flex-row gap-4">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -150,45 +150,47 @@ export function DataTable<T extends Record<string, any>>({
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="flex-1"
+            className="flex-1 md:max-w-sm"
           />
         )}
-        {filters.map((filter) => (
-          <Select
-            key={String(filter.key)}
-            value={filterValues[String(filter.key)] || ""}
-            onValueChange={(value) => handleFilterChange(String(filter.key), value)}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={filter.label} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все</SelectItem>
-              {filter.options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ))}
+        <div className="flex flex-col md:flex-row gap-2 md:gap-4">
+          {filters.map((filter) => (
+            <Select
+              key={String(filter.key)}
+              value={filterValues[String(filter.key)] || ""}
+              onValueChange={(value) => handleFilterChange(String(filter.key), value)}
+            >
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder={filter.label} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все</SelectItem>
+                {filter.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
                 <TableHead
                   key={String(column.key)}
-                  className={column.sortable ? "cursor-pointer hover:bg-gray-50" : ""}
+                  className={`${column.sortable ? "cursor-pointer hover:bg-gray-50" : ""} whitespace-nowrap`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
                   <div className="flex items-center space-x-1">
-                    <span>{column.header}</span>
+                    <span className="text-xs md:text-sm">{column.header}</span>
                     {column.sortable && (
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown className="h-3 w-3 md:h-4 md:w-4" />
                     )}
                   </div>
                 </TableHead>
