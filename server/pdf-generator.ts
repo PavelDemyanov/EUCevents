@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { Event, UserWithEvent } from '@shared/schema';
+import { storage } from './storage';
 
 // Format phone number for display: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
 function formatPhoneNumber(phone: string): string {
@@ -255,12 +256,24 @@ function formatDateTime(date: Date | string): string {
   return Buffer.from(formatted, 'utf8').toString('utf8');
 }
 
+// Export function with the correct name for the route
+export async function generateParticipantListPDF(eventId: number): Promise<Buffer> {
+  const event = await storage.getEvent(eventId);
+  const participants = await storage.getUsersByEventId(eventId);
+  
+  if (!event) {
+    throw new Error('Мероприятие не найдено');
+  }
+  
+  return generateParticipantsPDF(eventId, storage);
+}
+
 // Generate PDF grouped by transport type
 export async function generateTransportGroupedPDF(eventId: number): Promise<Buffer> {
   return new Promise(async (resolve) => {
     try {
-      const event = await storage.getEventById(eventId);
-      const participants = await storage.getParticipantsByEventId(eventId);
+      const event = await storage.getEvent(eventId);
+      const participants = await storage.getUsersByEventId(eventId);
 
       if (!event) {
         throw new Error('Event not found');

@@ -349,8 +349,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:eventId/pdf", requireAuth, async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      const { generateParticipantListPDF } = await import('./pdf-generator');
-      const pdfBuffer = await generateParticipantListPDF(eventId);
+      const { generateParticipantsPDF } = await import('./pdf-generator');
+      const event = await storage.getEvent(eventId);
+      const participants = await storage.getUsersByEventId(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Мероприятие не найдено" });
+      }
+      const pdfBuffer = await generateParticipantsPDF(eventId, storage);
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="participants-${eventId}.pdf"`);
