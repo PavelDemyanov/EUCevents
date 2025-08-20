@@ -217,9 +217,30 @@ export default function Settings() {
       });
     },
     onError: (error: any) => {
+      // Extract clean message from API error
+      let errorMessage = "Не удалось создать привязку номера";
+      
+      if (error?.message) {
+        // Check if error message contains JSON (technical error)
+        if (error.message.includes('{"message":')) {
+          try {
+            const jsonMatch = error.message.match(/\{"message":"([^"]+)"/);
+            if (jsonMatch) {
+              errorMessage = jsonMatch[1];
+            }
+          } catch (e) {
+            // If JSON parsing fails, use clean message
+            errorMessage = "Не удалось создать привязку номера";
+          }
+        } else {
+          // Use the error message directly if it's clean
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: "Ошибка",
-        description: error.message || "Не удалось создать привязку номера",
+        description: errorMessage,
         variant: "destructive",
       });
     },
