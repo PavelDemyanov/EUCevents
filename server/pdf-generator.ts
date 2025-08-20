@@ -94,8 +94,8 @@ export async function generateParticipantsPDF(
       const tableTop = doc.y;
       const itemCodeX = 50;
       const itemNameX = 80;
-      const itemNicknameX = 250;
-      const itemPhoneX = 350;
+      const itemNicknameX = 240;
+      const itemPhoneX = 330;
       const itemTransportX = 450;
 
       // Table headers with UTF-8 encoding
@@ -159,17 +159,18 @@ export async function generateParticipantsPDF(
         doc.fontSize(fontSize);
         
         // Measure text heights for proper row spacing
-        const nameHeight = doc.heightOfString(fullName, { width: 160 });
-        const nicknameHeight = doc.heightOfString(nickname, { width: 90 });
+        const nameHeight = doc.heightOfString(fullName, { width: 150 });
+        const nicknameHeight = doc.heightOfString(nickname, { width: 80 });
+        const phoneHeight = doc.heightOfString(formatPhoneNumber(participant.phone), { width: 110 });
         const transportHeight = doc.heightOfString(transportTextUtf8, { width: 100 });
         
-        const maxHeight = Math.max(nameHeight, nicknameHeight, transportHeight, fontSize);
+        const maxHeight = Math.max(nameHeight, nicknameHeight, phoneHeight, transportHeight, fontSize);
         const rowHeight = Math.max(maxHeight + 6, 20); // At least 20px, but more if text wraps
 
         doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
-           .text(fullName, itemNameX, currentY, { width: 160 })
-           .text(nickname, itemNicknameX, currentY, { width: 90 })
-           .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
+           .text(fullName, itemNameX, currentY, { width: 150 })
+           .text(nickname, itemNicknameX, currentY, { width: 80 })
+           .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY, { width: 110 })
            .text(transportTextUtf8, itemTransportX, currentY, { width: 100 });
 
         currentY += rowHeight;
@@ -214,15 +215,7 @@ export async function generateParticipantsPDF(
       doc.fontSize(14)
          .text(totalText, 50, summaryY + 60, { align: 'center' });
 
-      // Footer with UTF-8 encoding
-      const footerText = Buffer.from(`Сгенерировано ${new Date().toLocaleString('ru-RU')}`, 'utf8').toString('utf8');
-      doc.fontSize(8)
-         .text(
-           footerText,
-           50,
-           750,
-           { align: 'center' }
-         );
+
 
       doc.end();
     } catch (error) {
@@ -360,9 +353,9 @@ export async function generateTransportGroupedPDF(eventId: number): Promise<Buff
         // Table headers
         const tableTop = doc.y;
         const itemCodeX = 50;
-        const itemNameX = 100;
-        const itemNicknameX = 250;
-        const itemPhoneX = 350;
+        const itemNameX = 80;
+        const itemNicknameX = 240;
+        const itemPhoneX = 330;
         const itemTransportX = 450;
 
         // Table headers with UTF-8 encoding
@@ -423,17 +416,18 @@ export async function generateTransportGroupedPDF(eventId: number): Promise<Buff
           doc.fontSize(fontSize);
           
           // Measure text heights for proper row spacing
-          const nameHeight = doc.heightOfString(fullName, { width: 160 });
-          const nicknameHeight = doc.heightOfString(nickname, { width: 90 });
+          const nameHeight = doc.heightOfString(fullName, { width: 150 });
+          const nicknameHeight = doc.heightOfString(nickname, { width: 80 });
+          const phoneHeight = doc.heightOfString(formatPhoneNumber(participant.phone), { width: 110 });
           const modelHeight = doc.heightOfString(modelTextUtf8, { width: 100 });
           
-          const maxHeight = Math.max(nameHeight, nicknameHeight, modelHeight, fontSize);
+          const maxHeight = Math.max(nameHeight, nicknameHeight, phoneHeight, modelHeight, fontSize);
           const rowHeight = Math.max(maxHeight + 6, 20); // At least 20px, but more if text wraps
 
           doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
-             .text(fullName, itemNameX, currentY, { width: 160 })
-             .text(nickname, itemNicknameX, currentY, { width: 90 })
-             .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
+             .text(fullName, itemNameX, currentY, { width: 150 })
+             .text(nickname, itemNicknameX, currentY, { width: 80 })
+             .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY, { width: 110 })
              .text(modelTextUtf8, itemTransportX, currentY, { width: 100 });
 
           currentY += rowHeight;
@@ -459,15 +453,7 @@ export async function generateTransportGroupedPDF(eventId: number): Promise<Buff
         doc.fontSize(14)
            .text(summaryText, 50, summaryY, { align: 'center' });
 
-        // Footer with UTF-8 encoding
-        const footerText = Buffer.from(`Сгенерировано ${new Date().toLocaleString('ru-RU')}`, 'utf8').toString('utf8');
-        doc.fontSize(8)
-           .text(
-             footerText,
-             50,
-             750,
-             { align: 'center' }
-           );
+
       }
 
       doc.end();
