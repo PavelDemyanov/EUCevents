@@ -60,7 +60,7 @@ export async function generateParticipantsPDF(
 
       // Table rows
       let currentY = tableTop + 30;
-      const activeParticipants = participants.filter(p => p.isActive);
+      const activeParticipants = participants?.filter(p => p.isActive) || [];
       
       activeParticipants.forEach((participant, index) => {
         // Check if we need a new page
