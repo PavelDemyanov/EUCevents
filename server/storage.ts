@@ -608,6 +608,29 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async checkFixedNumberConflicts(participantNumber: number): Promise<Array<{eventName: string, userName: string, telegramNickname: string}>> {
+    const conflicts = await db
+      .select({
+        eventName: events.name,
+        userName: users.fullName,
+        telegramNickname: users.telegramNickname,
+      })
+      .from(users)
+      .leftJoin(events, eq(users.eventId, events.id))
+      .where(
+        and(
+          eq(users.participantNumber, participantNumber),
+          eq(users.isActive, true)
+        )
+      );
+    
+    return conflicts.map(conflict => ({
+      eventName: conflict.eventName || `Удалённое мероприятие`,
+      userName: conflict.userName,
+      telegramNickname: conflict.telegramNickname || 'Неизвестно',
+    }));
+  }
+
   async updateUsersWithFixedNumber(telegramNickname: string, participantNumber: number): Promise<void> {
     // Find all users with this telegram nickname
     const usersToUpdate = await db

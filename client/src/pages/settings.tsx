@@ -46,6 +46,8 @@ export default function Settings() {
     participantNumber: 1
   });
   const [useCustomNickname, setUseCustomNickname] = useState(false);
+  const [numberConflicts, setNumberConflicts] = useState<Array<{eventName: string, userName: string, telegramNickname: string}>>([]);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -265,9 +267,30 @@ export default function Settings() {
     createBindingMutation.mutate(newBinding);
   };
 
+  // Check for conflicts when number changes
+  const checkNumberConflicts = async (participantNumber: number) => {
+    if (participantNumber < 1 || participantNumber > 999) {
+      setNumberConflicts([]);
+      return;
+    }
+    
+    try {
+      setCheckingConflicts(true);
+      const response = await apiRequest(`/api/fixed-bindings/check-conflicts/${participantNumber}`);
+      setNumberConflicts(response.conflicts || []);
+    } catch (error) {
+      console.error("Ошибка проверки конфликтов:", error);
+      setNumberConflicts([]);
+    } finally {
+      setCheckingConflicts(false);
+    }
+  };
+
+  // Reset form
   const resetBindingForm = () => {
     setNewBinding({ telegramNickname: "", participantNumber: 1 });
     setUseCustomNickname(false);
+    setNumberConflicts([]);
     setShowBindingDialog(false);
   };
 
@@ -693,10 +716,45 @@ export default function Settings() {
                 min="1"
                 max="999"
                 value={newBinding.participantNumber}
-                onChange={(e) => setNewBinding({ ...newBinding, participantNumber: parseInt(e.target.value) })}
+                onChange={(e) => {
+                  const number = parseInt(e.target.value);
+                  setNewBinding({ ...newBinding, participantNumber: number });
+                  if (!isNaN(number)) {
+                    checkNumberConflicts(number);
+                  }
+                }}
                 placeholder="1"
                 required
               />
+              
+              {/* Conflict warnings */}
+              {checkingConflicts && (
+                <div className="text-xs text-blue-600 mt-1">
+                  Проверка конфликтов...
+                </div>
+              )}
+              
+              {numberConflicts.length > 0 && (
+                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <div className="text-sm font-medium text-amber-800">
+                    ⚠️ Конфликт номеров ({numberConflicts.length})
+                  </div>
+                  <div className="text-xs text-amber-700 mt-1">
+                    Номер {newBinding.participantNumber} уже используется:
+                  </div>
+                  <div className="text-xs text-amber-600 mt-2 space-y-1 max-h-20 overflow-y-auto">
+                    {numberConflicts.map((conflict, index) => (
+                      <div key={index}>
+                        • {conflict.userName} (@{conflict.telegramNickname}) в "{conflict.eventName}"
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs text-amber-700 mt-2">
+                    При создании привязки участники не получат номер {newBinding.participantNumber} в мероприятиях, где он уже занят.
+                  </div>
+                </div>
+              )}
+              
               <p className="text-xs text-gray-500 mt-1">
                 Фиксированный номер от 1 до 999. При создании привязки все существующие пользователи с этим telegram-ником будут обновлены на новый номер (если номер не занят в их мероприятиях).
               </p>

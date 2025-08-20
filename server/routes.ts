@@ -517,6 +517,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check conflicts for fixed number
+  app.get("/api/fixed-bindings/check-conflicts/:number", requireAuth, async (req, res) => {
+    try {
+      const participantNumber = parseInt(req.params.number);
+      if (isNaN(participantNumber) || participantNumber < 1 || participantNumber > 999) {
+        return res.status(400).json({ message: "Неверный номер участника" });
+      }
+      
+      const conflicts = await storage.checkFixedNumberConflicts(participantNumber);
+      res.json({ conflicts });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Ошибка проверки конфликтов" });
+    }
+  });
+
   app.post("/api/fixed-bindings", requireAuth, async (req, res) => {
     try {
       const bindingData = insertFixedNumberBindingSchema.parse(req.body);
@@ -524,13 +539,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Count existing users that will be updated
       const existingUsers = await storage.getUsersByTelegramNickname(bindingData.telegramNickname);
       
+      // Check conflicts
+      const conflicts = await storage.checkFixedNumberConflicts(bindingData.participantNumber);
+      
       const binding = await storage.createFixedNumberBinding(bindingData);
       
       res.json({ 
         binding, 
         updatedUsersCount: existingUsers.length,
+        conflicts: conflicts.length,
         message: existingUsers.length > 0 
-          ? `Привязка создана. Обновлено ${existingUsers.length} существующих пользователей.`
+          ? `Привязка создана. Обновлено ${existingUsers.length} существующих пользователей.${conflicts.length > 0 ? ` Конфликтов: ${conflicts.length}` : ''}`
           : "Привязка создана."
       });
     } catch (error: any) {
