@@ -1022,9 +1022,10 @@ export async function sendEventNotificationToGroup(
     scooterCount: number;
     spectatorCount: number;
     totalCount: number;
-  }
+  },
+  botUsername?: string
 ) {
-  const message = `🏁 УВЕДОМЛЕНИЕ О МЕРОПРИЯТИИ 🏁\n\n` +
+  const message = `🏁 УВЕДОМЛЕНИЕ О МЕРОПРИЯТИИ\n\n` +
     `📅 ${eventData.name}\n` +
     `📍 ${eventData.location}\n` +
     `🕐 ${formatDateTime(eventData.datetime)}\n\n` +
@@ -1033,7 +1034,7 @@ export async function sendEventNotificationToGroup(
     `🛴 Самокат: ${eventData.scooterCount} чел.\n` +
     `👀 Зрители: ${eventData.spectatorCount} чел.\n` +
     `📋 Всего зарегистрировано: ${eventData.totalCount} чел.\n\n` +
-    `🤖 Для регистрации напишите мне в личные сообщения и отправьте команду /start`;
+    `🤖 Для регистрации напишите ${botUsername ? `@${botUsername}` : 'боту в личные сообщения и отправьте команду /start'}`;
 
   try {
     await bot.sendMessage(chatId, message);

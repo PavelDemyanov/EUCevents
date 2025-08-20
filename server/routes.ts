@@ -459,6 +459,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!bot.isActive) continue;
         
         const tempBot = new TelegramBot(bot.token);
+        
+        // Get bot username from Telegram API
+        let botUsername;
+        try {
+          const botInfo = await tempBot.getMe();
+          botUsername = botInfo.username;
+        } catch (error) {
+          console.error('Failed to get bot info:', error);
+          botUsername = null;
+        }
+        
         await sendEventNotificationToGroup(tempBot, chat.chatId, {
         name: eventWithStats.name,
         location: eventWithStats.location,
@@ -467,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scooterCount: eventWithStats.scooterCount,
         spectatorCount: eventWithStats.spectatorCount,
         totalCount: eventWithStats.participantCount,
-        });
+        }, botUsername);
       }
 
       res.json({ success: true });
