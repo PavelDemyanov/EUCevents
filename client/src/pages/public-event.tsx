@@ -1,16 +1,98 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Calendar, MapPin, Users, FileText } from "lucide-react";
+
+interface PublicEventData {
+  event: {
+    id: number;
+    name: string;
+    location: string;
+    datetime: string;
+  };
+  participants: Array<{
+    id: number;
+    fullName: string;
+    telegramNickname: string;
+    transportType: string;
+    transportModel?: string;
+    participantNumber: number;
+    isActive: boolean;
+  }>;
+}
 
 export default function PublicEvent() {
   const [match, params] = useRoute("/public/:shareCode");
   const shareCode = params?.shareCode;
+  const { toast } = useToast();
 
-  const { data: eventData, isLoading } = useQuery({
+  const { data: eventData, isLoading } = useQuery<PublicEventData>({
     queryKey: ["/api/public/events", shareCode],
     enabled: !!shareCode
+  });
+
+  const generatePdfMutation = useMutation({
+    mutationFn: async () => {
+      if (!eventData?.event?.id) throw new Error('Event not found');
+      const response = await fetch(`/api/events/${eventData.event.id}/pdf`);
+      if (!response.ok) throw new Error('Failed to generate PDF');
+      return await response.blob();
+    },
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `participants-${eventData?.event?.id || 'event'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "PDF создан",
+        description: "Общий список участников загружен",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось создать PDF",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateTransportPdfMutation = useMutation({
+    mutationFn: async () => {
+      if (!eventData?.event?.id) throw new Error('Event not found');
+      const response = await fetch(`/api/events/${eventData.event.id}/pdf-transport`);
+      if (!response.ok) throw new Error('Failed to generate transport PDF');
+      return await response.blob();
+    },
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `participants-transport-${eventData?.event?.id || 'event'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "PDF создан",
+        description: "Список по транспорту загружен",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось создать PDF по транспорту",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -37,13 +119,13 @@ export default function PublicEvent() {
   }
 
   const { event, participants } = eventData;
-  const activeParticipants = participants.filter((p: any) => p.isActive);
+  const activeParticipants = participants.filter((p) => p.isActive);
 
   // Group participants by transport type
   const groupedParticipants = {
-    monowheel: activeParticipants.filter((p: any) => p.transportType === 'monowheel'),
-    scooter: activeParticipants.filter((p: any) => p.transportType === 'scooter'),
-    spectator: activeParticipants.filter((p: any) => p.transportType === 'spectator')
+    monowheel: activeParticipants.filter((p) => p.transportType === 'monowheel'),
+    scooter: activeParticipants.filter((p) => p.transportType === 'scooter'),
+    spectator: activeParticipants.filter((p) => p.transportType === 'spectator')
   };
 
   const getTransportTypeLabel = (type: string) => {
@@ -73,7 +155,7 @@ export default function PublicEvent() {
             {event.name}
           </h1>
           
-          <div className="flex flex-wrap justify-center gap-6 text-gray-600 dark:text-gray-300">
+          <div className="flex flex-wrap justify-center gap-6 text-gray-600 dark:text-gray-300 mb-6">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5" />
               <span>{event.location}</span>
@@ -92,6 +174,29 @@ export default function PublicEvent() {
               <Users className="w-5 h-5" />
               <span>{activeParticipants.length} участников</span>
             </div>
+          </div>
+
+          {/* PDF Download Buttons */}
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => generatePdfMutation.mutate()}
+              disabled={generatePdfMutation.isPending || !eventData?.event?.id}
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {generatePdfMutation.isPending ? "Создание..." : "Общий PDF"}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => generateTransportPdfMutation.mutate()}
+              disabled={generateTransportPdfMutation.isPending || !eventData?.event?.id}
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {generateTransportPdfMutation.isPending ? "Создание..." : "По транспорту PDF"}
+            </Button>
           </div>
         </div>
 
@@ -152,7 +257,7 @@ export default function PublicEvent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {Object.entries(groupedParticipants).map(([type, participants]) => {
+              {(Object.entries(groupedParticipants) as [string, typeof participants][]).map(([type, participants]) => {
                 if (participants.length === 0) return null;
                 
                 return (
@@ -164,7 +269,7 @@ export default function PublicEvent() {
                     </h3>
                     
                     <div className="grid gap-3">
-                      {participants.map((participant: any) => (
+                      {participants.map((participant) => (
                         <div 
                           key={participant.id}
                           className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
