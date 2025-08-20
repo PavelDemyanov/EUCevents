@@ -8,6 +8,7 @@ import Login from "@/pages/login";
 import Events from "@/pages/events";
 import Participants from "@/pages/participants";
 import Settings from "@/pages/settings";
+import PublicEvent from "@/pages/public-event";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -154,8 +155,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <AuthenticatedApp />
+        <div className="min-h-screen">
+          <Switch>
+            <Route path="/public/:shareCode" component={PublicEvent} />
+            <Route path="*" component={AuthenticatedApp} />
+          </Switch>
+          <Toaster />
+        </div>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, FileText, Download, Bell } from "lucide-react";
+import { ArrowLeft, FileText, Download, Bell, Share2 } from "lucide-react";
 import type { UserWithEvent } from "@shared/schema";
 
 // Format phone number for display: 7XXXXXXXXXX -> +7 (XXX) XXX-XX-XX
@@ -133,6 +133,28 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       toast({
         title: "Ошибка",
         description: error.message || "Не удалось обновить данные участника",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateShareLinkMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/events/${eventId}/share`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const shareUrl = `${window.location.origin}/public/${data.shareCode}`;
+      window.open(shareUrl, '_blank');
+      toast({
+        title: "Публичная ссылка создана",
+        description: "Страница открыта в новом окне",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать ссылку",
         variant: "destructive",
       });
     },
@@ -328,6 +350,17 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               >
                 <FileText className="h-4 w-4" />
                 {generateTransportPdfMutation.isPending ? "По транспорту PDF..." : "По транспорту PDF"}
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                onClick={() => generateShareLinkMutation.mutate()}
+                disabled={generateShareLinkMutation.isPending}
+              >
+                <Share2 className="h-4 w-4" />
+                {generateShareLinkMutation.isPending ? "Создание..." : "Поделиться"}
               </Button>
             </div>
           </div>

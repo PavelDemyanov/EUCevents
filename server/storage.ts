@@ -41,11 +41,13 @@ export interface IStorage {
   // Event operations
   getEvents(): Promise<EventWithStats[]>;
   getEvent(id: number): Promise<Event | undefined>;
+  getEventByShareCode(shareCode: string): Promise<Event | undefined>;
   getActiveEvents(): Promise<Event[]>;
   getActiveEventsByChatId(chatId: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
+  generateShareCode(eventId: number): Promise<string>;
 
   // Bot operations
   getBots(): Promise<Bot[]>;
@@ -280,6 +282,11 @@ export class DatabaseStorage implements IStorage {
     return event;
   }
 
+  async getEventByShareCode(shareCode: string): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.shareCode, shareCode));
+    return event;
+  }
+
   async getActiveEvents(): Promise<Event[]> {
     return await db
       .select()
@@ -297,10 +304,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
+    const shareCode = this.generateRandomShareCode();
     const [createdEvent] = await db
       .insert(events)
       .values({
         ...event,
+        shareCode,
         updatedAt: new Date(),
       })
       .returning();
@@ -321,6 +330,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async generateShareCode(eventId: number): Promise<string> {
+    // Generate or update share code for existing event
+    const shareCode = this.generateRandomShareCode();
+    await db
+      .update(events)
+      .set({ shareCode, updatedAt: new Date() })
+      .where(eq(events.id, eventId));
+    return shareCode;
+  }
+
+  private generateRandomShareCode(): string {
+    // Generate format: XXX-YYYY-ZZZ
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const part1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const part3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return `${part1}-${part2}-${part3}`;
   }
 
   // Bot operations

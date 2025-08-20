@@ -471,6 +471,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PDF generation route
 
 
+  // Public event route
+  app.get("/api/public/events/:shareCode", async (req, res) => {
+    try {
+      const shareCode = req.params.shareCode;
+      const event = await storage.getEventByShareCode(shareCode);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Мероприятие не найдено" });
+      }
+
+      const participants = await storage.getUsersByEventId(event.id);
+      const activeParticipants = participants.filter(p => p.isActive);
+
+      // Remove phone numbers for public view
+      const publicParticipants = activeParticipants.map(p => ({
+        id: p.id,
+        fullName: p.fullName,
+        telegramNickname: p.telegramNickname,
+        transportType: p.transportType,
+        transportModel: p.transportModel,
+        participantNumber: p.participantNumber,
+        isActive: p.isActive
+      }));
+
+      res.json({
+        event: {
+          id: event.id,
+          name: event.name,
+          location: event.location,
+          datetime: event.datetime
+        },
+        participants: publicParticipants
+      });
+    } catch (error) {
+      console.error("Error fetching public event:", error);
+      res.status(500).json({ message: "Ошибка получения данных мероприятия" });
+    }
+  });
+
+  // Generate/get share code for event
+  app.post("/api/events/:id/share", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.id);
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Мероприятие не найдено" });
+      }
+
+      let shareCode = event.shareCode;
+      if (!shareCode) {
+        shareCode = await storage.generateShareCode(eventId);
+      }
+
+      res.json({ shareCode });
+    } catch (error) {
+      console.error("Error generating share code:", error);
+      res.status(500).json({ message: "Ошибка генерации ссылки" });
+    }
+  });
+
   // Telegram nicknames route
   app.get("/api/telegram-nicknames", requireAuth, async (req, res) => {
     try {

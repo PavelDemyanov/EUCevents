@@ -58,6 +58,7 @@ export const events = pgTable("events", {
   location: text("location").notNull(),
   datetime: timestamp("datetime").notNull(),
   chatId: integer("chat_id").notNull(),
+  shareCode: varchar("share_code", { length: 50 }).unique(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
