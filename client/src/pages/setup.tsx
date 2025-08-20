@@ -65,7 +65,10 @@ export default function Setup() {
 
   const completeMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("/api/setup/complete", "POST", data);
+      return apiRequest("/api/setup/complete", {
+        method: "POST",
+        body: data
+      });
     },
     onSuccess: () => {
       toast({

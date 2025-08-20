@@ -51,7 +51,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
   const createEventMutation = useMutation({
     mutationFn: async (eventData: typeof newEvent) => {
-      await apiRequest("POST", "/api/events", eventData);
+      await apiRequest("/api/events", {
+        method: "POST",
+        body: eventData
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -73,7 +76,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
   const editEventMutation = useMutation({
     mutationFn: async ({ eventId, eventData }: { eventId: number; eventData: any }) => {
-      await apiRequest("PUT", `/api/events/${eventId}`, eventData);
+      await apiRequest(`/api/events/${eventId}`, {
+        method: "PUT",
+        body: eventData
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -95,7 +101,9 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      await apiRequest("DELETE", `/api/events/${eventId}`);
+      await apiRequest(`/api/events/${eventId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });

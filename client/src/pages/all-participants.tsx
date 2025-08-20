@@ -42,7 +42,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
   const queryClient = useQueryClient();
 
   // Fetch all participants
-  const { data: participants = [], isLoading } = useQuery({
+  const { data: participants = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users/all"],
   });
 

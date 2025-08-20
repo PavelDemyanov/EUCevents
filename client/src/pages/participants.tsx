@@ -49,7 +49,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   const generatePdfMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("GET", `/api/events/${eventId}/pdf`);
+      const response = await apiRequest(`/api/events/${eventId}/pdf`);
       const blob = await response.blob();
       return blob;
     },
@@ -71,7 +71,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   const generateTransportPdfMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("GET", `/api/events/${eventId}/pdf-transport`);
+      const response = await apiRequest(`/api/events/${eventId}/pdf-transport`);
       const blob = await response.blob();
       return blob;
     },
@@ -93,7 +93,9 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   const notifyGroupMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", `/api/events/${eventId}/notify-group`);
+      await apiRequest(`/api/events/${eventId}/notify-group`, {
+        method: "POST"
+      });
     },
     onSuccess: () => {
       toast({
@@ -116,8 +118,9 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       field: string;
       value: any;
     }) => {
-      await apiRequest("PUT", `/api/participants/${participantId}`, {
-        [field]: value
+      await apiRequest(`/api/participants/${participantId}`, {
+        method: "PUT",
+        body: { [field]: value }
       });
     },
     onSuccess: () => {
@@ -140,7 +143,9 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
 
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/events/${eventId}/share`);
+      const response = await apiRequest(`/api/events/${eventId}/share`, {
+        method: "POST"
+      });
       return response.json();
     },
     onSuccess: (data) => {

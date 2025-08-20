@@ -74,7 +74,10 @@ export default function Settings() {
   // Мутации для ботов
   const createBotMutation = useMutation({
     mutationFn: async (botData: typeof newBot) => {
-      await apiRequest("POST", "/api/bots", botData);
+      await apiRequest("/api/bots", {
+        method: "POST",
+        body: botData
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
@@ -96,7 +99,9 @@ export default function Settings() {
 
   const deleteBotMutation = useMutation({
     mutationFn: async (botId: number) => {
-      await apiRequest("DELETE", `/api/bots/${botId}`);
+      await apiRequest(`/api/bots/${botId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
@@ -116,7 +121,9 @@ export default function Settings() {
 
   const toggleBotMutation = useMutation({
     mutationFn: async ({ botId, action }: { botId: number, action: 'start' | 'stop' }) => {
-      await apiRequest("POST", `/api/bots/${botId}/${action}`);
+      await apiRequest(`/api/bots/${botId}/${action}`, {
+        method: "POST"
+      });
     },
     onSuccess: (_, { action }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/bots"] });
@@ -137,9 +144,12 @@ export default function Settings() {
   // Мутации для чатов
   const createChatMutation = useMutation({
     mutationFn: async (chatData: typeof newChat) => {
-      await apiRequest("POST", "/api/chats", {
-        ...chatData,
-        chatId: parseInt(chatData.chatId)
+      await apiRequest("/api/chats", {
+        method: "POST",
+        body: {
+          ...chatData,
+          chatId: parseInt(chatData.chatId)
+        }
       });
     },
     onSuccess: () => {
@@ -162,7 +172,9 @@ export default function Settings() {
 
   const deleteChatMutation = useMutation({
     mutationFn: async (chatId: number) => {
-      await apiRequest("DELETE", `/api/chats/${chatId}`);
+      await apiRequest(`/api/chats/${chatId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chats"] });
@@ -183,7 +195,10 @@ export default function Settings() {
   // Мутации для привязки номеров
   const createBindingMutation = useMutation({
     mutationFn: async (bindingData: InsertFixedNumberBinding) => {
-      return await apiRequest("POST", "/api/fixed-bindings", bindingData);
+      return await apiRequest("/api/fixed-bindings", {
+        method: "POST",
+        body: bindingData
+      });
     },
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-bindings"] });
@@ -205,7 +220,9 @@ export default function Settings() {
 
   const deleteBindingMutation = useMutation({
     mutationFn: async (bindingId: number) => {
-      await apiRequest("DELETE", `/api/fixed-bindings/${bindingId}`);
+      await apiRequest(`/api/fixed-bindings/${bindingId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-bindings"] });
@@ -263,7 +280,9 @@ export default function Settings() {
   // Мутация для удаления администратора
   const deleteAdminMutation = useMutation({
     mutationFn: async (adminId: number) => {
-      await apiRequest("DELETE", `/api/admins/${adminId}`);
+      await apiRequest(`/api/admins/${adminId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admins"] });
@@ -847,9 +866,15 @@ function AdminDialog({
   const createAdminMutation = useMutation({
     mutationFn: async (adminData: InsertAdminUserWithValidation) => {
       if (isEdit && admin) {
-        await apiRequest("PUT", `/api/admins/${admin.id}`, adminData);
+        await apiRequest(`/api/admins/${admin.id}`, {
+          method: "PUT",
+          body: adminData
+        });
       } else {
-        await apiRequest("POST", "/api/admins", adminData);
+        await apiRequest("/api/admins", {
+          method: "POST",
+          body: adminData
+        });
       }
     },
     onSuccess: () => {
