@@ -254,3 +254,213 @@ function formatDateTime(date: Date | string): string {
   
   return Buffer.from(formatted, 'utf8').toString('utf8');
 }
+
+// Generate PDF grouped by transport type
+export async function generateTransportGroupedPDF(eventId: number): Promise<Buffer> {
+  return new Promise(async (resolve) => {
+    try {
+      const event = await storage.getEventById(eventId);
+      const participants = await storage.getParticipantsByEventId(eventId);
+
+      if (!event) {
+        throw new Error('Event not found');
+      }
+
+      const doc = new PDFDocument();
+      const buffers: Buffer[] = [];
+      doc.on('data', (buffer) => buffers.push(buffer));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+      // Try to use DejaVu Sans font that supports Cyrillic
+      try {
+        // Use the system DejaVu font directly
+        doc.font('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+        console.log('DejaVu font loaded successfully for transport PDF');
+      } catch (e) {
+        try {
+          // Try Nix store path
+          const { execSync } = require('child_process');
+          const dejavuPath = execSync('find /nix/store -name "DejaVuSans.ttf" 2>/dev/null | head -1').toString().trim();
+          if (dejavuPath) {
+            doc.font(dejavuPath);
+            console.log('DejaVu font loaded from Nix store for transport PDF');
+          } else {
+            throw new Error('DejaVu not found');
+          }
+        } catch (e2) {
+          // Ultimate fallback - encode text differently for better Cyrillic support
+          console.log('Using Helvetica with improved text encoding for transport PDF');
+        }
+      }
+
+      // Group participants by transport type
+      const activeParticipants = (participants || []).filter(p => p.isActive);
+      const groupedParticipants = {
+        monowheel: activeParticipants.filter(p => p.transportType === 'monowheel'),
+        scooter: activeParticipants.filter(p => p.transportType === 'scooter'),
+        spectator: activeParticipants.filter(p => p.transportType === 'spectator')
+      };
+
+      const transportTypes = [
+        { key: 'monowheel', label: 'Моноколеса' },
+        { key: 'scooter', label: 'Самокаты' },
+        { key: 'spectator', label: 'Зрители' }
+      ];
+
+      let isFirstPage = true;
+
+      // Generate page for each transport type
+      for (const transportType of transportTypes) {
+        const participants = groupedParticipants[transportType.key as keyof typeof groupedParticipants];
+        
+        if (participants.length === 0) continue;
+
+        // Add new page for each transport type (except first)
+        if (!isFirstPage) {
+          doc.addPage();
+        }
+        isFirstPage = false;
+
+        // Title with proper encoding
+        const titleText = Buffer.from(`Список участников мероприятия - ${transportType.label}`, 'utf8').toString('utf8');
+        doc.fontSize(20)
+           .text(titleText, { 
+             align: 'center',
+             width: doc.page.width - 100
+           });
+        
+        doc.moveDown(0.5);
+        
+        // Event details with UTF-8 encoding
+        const eventName = Buffer.from(event.name || '', 'utf8').toString('utf8');
+        const eventLocation = Buffer.from(event.location || '', 'utf8').toString('utf8');
+        
+        doc.fontSize(16)
+           .text(eventName, { align: 'center' });
+        
+        doc.fontSize(12)
+           .text(eventLocation, { align: 'center' })
+           .text(formatDateTime(event.datetime), { align: 'center' });
+        
+        doc.moveDown(1);
+
+        // Table headers
+        const tableTop = doc.y;
+        const itemCodeX = 50;
+        const itemNameX = 100;
+        const itemNicknameX = 250;
+        const itemPhoneX = 350;
+        const itemTransportX = 450;
+
+        // Table headers with UTF-8 encoding
+        const headers = {
+          number: Buffer.from('№', 'utf8').toString('utf8'),
+          fullName: Buffer.from('ФИО', 'utf8').toString('utf8'),
+          telegram: Buffer.from('Telegram', 'utf8').toString('utf8'),
+          phone: Buffer.from('Телефон', 'utf8').toString('utf8'),
+          transport: Buffer.from('Модель', 'utf8').toString('utf8')
+        };
+
+        doc.fontSize(10)
+           .text(headers.number, itemCodeX, tableTop)
+           .text(headers.fullName, itemNameX, tableTop)
+           .text(headers.telegram, itemNicknameX, tableTop)
+           .text(headers.phone, itemPhoneX, tableTop)
+           .text(headers.transport, itemTransportX, tableTop);
+
+        // Draw header line
+        doc.moveTo(itemCodeX, tableTop + 20)
+           .lineTo(550, tableTop + 20)
+           .stroke();
+
+        // Table rows
+        let currentY = tableTop + 30;
+        
+        participants.forEach((participant, index) => {
+          // Check if we need a new page (with extra space for multi-line text)
+          if (currentY > 650) {
+            doc.addPage();
+            currentY = 50;
+            
+            // Redraw header on new page
+            doc.fontSize(10)
+               .text(headers.number, itemCodeX, currentY)
+               .text(headers.fullName, itemNameX, currentY)
+               .text(headers.telegram, itemNicknameX, currentY)
+               .text(headers.phone, itemPhoneX, currentY)
+               .text(headers.transport, itemTransportX, currentY);
+
+            // Draw header line
+            doc.moveTo(itemCodeX, currentY + 20)
+               .lineTo(550, currentY + 20)
+               .stroke();
+               
+            currentY += 30;
+          }
+
+          const modelText = participant.transportModel || '';
+
+          // Ensure UTF-8 encoding for all text
+          const fullName = Buffer.from(participant.fullName || '', 'utf8').toString('utf8');
+          const nickname = Buffer.from(participant.telegramNickname || '', 'utf8').toString('utf8');
+          const modelTextUtf8 = Buffer.from(modelText, 'utf8').toString('utf8');
+
+          // Calculate text heights to determine row height
+          const fontSize = 9;
+          doc.fontSize(fontSize);
+          
+          // Measure text heights for proper row spacing
+          const nameHeight = doc.heightOfString(fullName, { width: 160 });
+          const nicknameHeight = doc.heightOfString(nickname, { width: 90 });
+          const modelHeight = doc.heightOfString(modelTextUtf8, { width: 100 });
+          
+          const maxHeight = Math.max(nameHeight, nicknameHeight, modelHeight, fontSize);
+          const rowHeight = Math.max(maxHeight + 6, 20); // At least 20px, but more if text wraps
+
+          doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
+             .text(fullName, itemNameX, currentY, { width: 160 })
+             .text(nickname, itemNicknameX, currentY, { width: 90 })
+             .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY)
+             .text(modelTextUtf8, itemTransportX, currentY, { width: 100 });
+
+          currentY += rowHeight;
+
+          // Draw row line with proper spacing
+          if (index < participants.length - 1) {
+            doc.moveTo(itemCodeX, currentY - 3)
+               .lineTo(550, currentY - 3)
+               .stroke();
+          }
+        });
+
+        // Summary for this transport type
+        const summaryY = currentY + 30;
+        
+        // Draw summary line
+        doc.moveTo(50, summaryY - 20)
+           .lineTo(550, summaryY - 20)
+           .stroke();
+
+        // Summary section with UTF-8 encoding
+        const summaryText = Buffer.from(`${transportType.label}: ${participants.length} участников`, 'utf8').toString('utf8');
+        doc.fontSize(14)
+           .text(summaryText, 50, summaryY, { align: 'center' });
+
+        // Footer with UTF-8 encoding
+        const footerText = Buffer.from(`Сгенерировано ${new Date().toLocaleString('ru-RU')}`, 'utf8').toString('utf8');
+        doc.fontSize(8)
+           .text(
+             footerText,
+             50,
+             750,
+             { align: 'center' }
+           );
+      }
+
+      doc.end();
+    } catch (error) {
+      console.error('Error generating transport PDF:', error);
+      throw error;
+    }
+  });
+}

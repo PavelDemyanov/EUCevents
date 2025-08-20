@@ -349,8 +349,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events/:eventId/pdf", requireAuth, async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      const { generateParticipantsPDF } = await import('./pdf-generator');
-      const pdfBuffer = await generateParticipantsPDF(eventId, storage);
+      const { generateParticipantListPDF } = await import('./pdf-generator');
+      const pdfBuffer = await generateParticipantListPDF(eventId);
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="participants-${eventId}.pdf"`);
@@ -358,6 +358,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating PDF:", error);
       res.status(500).json({ message: "Не удалось создать PDF" });
+    }
+  });
+
+  app.get("/api/events/:eventId/pdf-transport", requireAuth, async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { generateTransportGroupedPDF } = await import('./pdf-generator');
+      const pdfBuffer = await generateTransportGroupedPDF(eventId);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="participants-transport-${eventId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating transport PDF:", error);
+      res.status(500).json({ message: "Не удалось создать PDF по транспорту" });
     }
   });
 
@@ -448,28 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PDF generation route
-  app.get("/api/events/:id/pdf", requireAuth, async (req, res) => {
-    try {
-      const eventId = parseInt(req.params.id);
-      const event = await storage.getEvent(eventId);
-      const participants = await storage.getUsersByEventId(eventId);
-      
-      if (!event) {
-        return res.status(404).json({ message: "Мероприятие не найдено" });
-      }
 
-      if (!generateParticipantsPDF) {
-        return res.status(500).json({ message: "PDF генератор недоступен" });
-      }
-      const pdfBuffer = await generateParticipantsPDF(event, participants);
-      
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="participants-${event.id}.pdf"`);
-      res.send(pdfBuffer);
-    } catch (error) {
-      res.status(500).json({ message: "Ошибка генерации PDF" });
-    }
-  });
 
   // Telegram nicknames route
   app.get("/api/telegram-nicknames", requireAuth, async (req, res) => {

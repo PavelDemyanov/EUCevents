@@ -64,7 +64,29 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       document.body.removeChild(a);
       toast({
         title: "Успешно",
-        description: "PDF сгенерирован и загружен",
+        description: "Общий PDF сгенерирован и загружен",
+      });
+    },
+  });
+
+  const generateTransportPdfMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", `/api/events/${eventId}/pdf-transport`);
+      const blob = await response.blob();
+      return blob;
+    },
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `participants-transport-${eventId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "Успешно",
+        description: "PDF по транспорту сгенерирован и загружен",
       });
     },
   });
@@ -294,7 +316,18 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                 disabled={generatePdfMutation.isPending}
               >
                 <FileText className="h-4 w-4" />
-                {generatePdfMutation.isPending ? "PDF..." : "PDF"}
+                {generatePdfMutation.isPending ? "Общий PDF..." : "Общий PDF"}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 text-xs lg:text-sm whitespace-nowrap"
+                onClick={() => generateTransportPdfMutation.mutate()}
+                disabled={generateTransportPdfMutation.isPending}
+              >
+                <FileText className="h-4 w-4" />
+                {generateTransportPdfMutation.isPending ? "По транспорту PDF..." : "По транспорту PDF"}
               </Button>
             </div>
           </div>
