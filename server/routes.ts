@@ -557,6 +557,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const binding = await storage.createFixedNumberBinding(bindingData);
       
+      // Update existing users with the new binding
+      await storage.updateUsersWithFixedNumber(bindingData.telegramNickname, bindingData.participantNumber);
+      
       res.json({ 
         binding, 
         updatedUsersCount: existingUsers.length,

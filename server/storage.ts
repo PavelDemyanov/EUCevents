@@ -572,6 +572,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFixedNumberBinding(binding: InsertFixedNumberBinding): Promise<FixedNumberBinding> {
+    // First reassign all users who currently have this number (across all events)
+    const usersWithThisNumber = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.participantNumber, binding.participantNumber),
+          eq(users.isActive, true)
+        )
+      );
+
+    // Reassign conflicting users directly
+    for (const user of usersWithThisNumber) {
+      if (user.telegramNickname !== binding.telegramNickname) {
+        // This user needs a new number
+        const newNumber = await this.findNextAvailableNumber(user.eventId);
+        await db
+          .update(users)
+          .set({
+            participantNumber: newNumber,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
+      }
+    }
+
+    // Create the binding
     const [created] = await db
       .insert(fixedNumberBindings)
       .values(binding)
