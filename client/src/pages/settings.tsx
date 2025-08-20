@@ -31,6 +31,7 @@ export default function Settings() {
     telegramNickname: "",
     participantNumber: 1
   });
+  const [useCustomNickname, setUseCustomNickname] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -46,6 +47,10 @@ export default function Settings() {
 
   const { data: fixedBindings = [], isLoading: bindingsLoading } = useQuery({
     queryKey: ["/api/fixed-bindings"],
+  });
+
+  const { data: telegramNicknames = [], isLoading: nicknamesLoading } = useQuery({
+    queryKey: ["/api/telegram-nicknames"],
   });
 
   // Мутации для ботов
@@ -164,8 +169,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-bindings"] });
-      setShowBindingDialog(false);
-      setNewBinding({ telegramNickname: "", participantNumber: 1 });
+      resetBindingForm();
       toast({
         title: "Успешно",
         description: "Привязка номера создана",
@@ -225,6 +229,12 @@ export default function Settings() {
     createBindingMutation.mutate(newBinding);
   };
 
+  const resetBindingForm = () => {
+    setNewBinding({ telegramNickname: "", participantNumber: 1 });
+    setUseCustomNickname(false);
+    setShowBindingDialog(false);
+  };
+
   const handleDeleteBinding = (bindingId: number) => {
     if (confirm("Вы уверены, что хотите удалить эту привязку номера?")) {
       deleteBindingMutation.mutate(bindingId);
@@ -281,7 +291,7 @@ export default function Settings() {
                     </div>
                     <div>
                       <h3 className="font-medium">{bot.name}</h3>
-                      <p className="text-sm text-gray-600">{bot.description}</p>
+                      <p className="text-sm text-gray-600">Telegram бот для уведомлений</p>
                       <p className="text-xs text-gray-500 mt-1">
                         Токен: {bot.token.substring(0, 10)}...
                       </p>
@@ -333,7 +343,7 @@ export default function Settings() {
           </div>
         </CardHeader>
         <CardContent>
-          {chats.length === 0 ? (
+          {(chats as Chat[])?.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <p>Чаты не настроены</p>
@@ -471,7 +481,7 @@ export default function Settings() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
               >
-                {(bots as Bot[]).map((bot: Bot) => (
+                {(bots as Bot[])?.map((bot: Bot) => (
                   <option key={bot.id} value={bot.id}>
                     {bot.name}
                   </option>
@@ -555,15 +565,54 @@ export default function Settings() {
           <form onSubmit={handleCreateBinding} className="space-y-4">
             <div>
               <Label htmlFor="telegram-nickname">Telegram-ник</Label>
-              <Input
-                id="telegram-nickname"
-                value={newBinding.telegramNickname}
-                onChange={(e) => setNewBinding({ ...newBinding, telegramNickname: e.target.value })}
-                placeholder="username"
-                required
-              />
+              <div className="space-y-2">
+                {/* Toggle between select and input */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="use-custom"
+                    checked={useCustomNickname}
+                    onChange={(e) => {
+                      setUseCustomNickname(e.target.checked);
+                      if (!e.target.checked) {
+                        setNewBinding({ ...newBinding, telegramNickname: "" });
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <Label htmlFor="use-custom" className="text-sm">
+                    Ввести новый ник
+                  </Label>
+                </div>
+                
+                {useCustomNickname ? (
+                  <Input
+                    id="telegram-nickname"
+                    value={newBinding.telegramNickname}
+                    onChange={(e) => setNewBinding({ ...newBinding, telegramNickname: e.target.value })}
+                    placeholder="username"
+                    required
+                  />
+                ) : (
+                  <select
+                    id="telegram-nickname-select"
+                    value={newBinding.telegramNickname}
+                    onChange={(e) => setNewBinding({ ...newBinding, telegramNickname: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    required
+                    disabled={nicknamesLoading}
+                  >
+                    <option value="">Выберите telegram-ник</option>
+                    {(telegramNicknames as string[]).map((nickname: string) => (
+                      <option key={nickname} value={nickname}>
+                        @{nickname}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Ник без символа @
+                Ник без символа @. Выберите из существующих или введите новый.
               </p>
             </div>
             <div>
@@ -586,7 +635,7 @@ export default function Settings() {
               <Button 
                 type="button" 
                 variant="outline"
-                onClick={() => setShowBindingDialog(false)}
+                onClick={resetBindingForm}
               >
                 Отмена
               </Button>

@@ -23,7 +23,7 @@ import {
   type UserWithEvent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNotNull, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -82,6 +82,9 @@ export interface IStorage {
 
   // Statistics operations
   getTodayParticipants(startDate: Date, endDate: Date): Promise<User[]>;
+  
+  // Telegram nicknames operations
+  getExistingTelegramNicknames(): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -465,6 +468,22 @@ export class DatabaseStorage implements IStorage {
           eq(users.isActive, true)
         )
       );
+  }
+
+  async getExistingTelegramNicknames(): Promise<string[]> {
+    const result = await db
+      .selectDistinct({ telegramNickname: users.telegramNickname })
+      .from(users)
+      .where(
+        and(
+          isNotNull(users.telegramNickname),
+          ne(users.telegramNickname, "")
+        )
+      );
+    
+    return result
+      .map(row => row.telegramNickname)
+      .filter(nickname => nickname !== null) as string[];
   }
 }
 

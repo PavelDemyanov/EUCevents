@@ -6,18 +6,22 @@ import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertF
 // Import Telegram bot and PDF generator only if files exist
 let startTelegramBot: any = null;
 let generateParticipantsPDF: any = null;
-try {
-  const telegramBot = await import("./telegram-bot");
-  startTelegramBot = telegramBot.startTelegramBot;
-} catch (e) {
-  console.warn("Telegram bot module not found");
-}
-try {
-  const pdfGenerator = await import("./pdf-generator");
-  generateParticipantsPDF = pdfGenerator.generateParticipantsPDF;
-} catch (e) {
-  console.warn("PDF generator module not found");
-}
+
+// Load modules asynchronously
+(async () => {
+  try {
+    const telegramBot = await import("./telegram-bot");
+    startTelegramBot = telegramBot.startTelegramBot;
+  } catch (e) {
+    console.warn("Telegram bot module not found");
+  }
+  try {
+    const pdfGenerator = await import("./pdf-generator");
+    generateParticipantsPDF = pdfGenerator.generateParticipantsPDF;
+  } catch (e) {
+    console.warn("PDF generator module not found");
+  }
+})();
 
 // Session middleware
 const sessionMiddleware = session({
@@ -27,7 +31,7 @@ const sessionMiddleware = session({
   cookie: {
     secure: false, // Set to false for development
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 6 * 30 * 24 * 60 * 60 * 1000, // 6 months
   },
 });
 
@@ -186,8 +190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/bots", requireAuth, async (req, res) => {
     try {
-      const { token, name, description } = req.body;
-      const bot = await storage.createBot({ token, name, description, isActive: true });
+      const { token, name } = req.body;
+      const bot = await storage.createBot({ token, name, isActive: true });
       res.json(bot);
     } catch (error) {
       console.error("Error creating bot:", error);
@@ -452,6 +456,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(pdfBuffer);
     } catch (error) {
       res.status(500).json({ message: "Ошибка генерации PDF" });
+    }
+  });
+
+  // Telegram nicknames route
+  app.get("/api/telegram-nicknames", requireAuth, async (req, res) => {
+    try {
+      const nicknames = await storage.getExistingTelegramNicknames();
+      res.json(nicknames);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка получения telegram-ников" });
     }
   });
 
