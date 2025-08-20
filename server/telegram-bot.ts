@@ -133,8 +133,15 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             existingData: {
               fullName: lastRegistration.fullName,
               phone: lastRegistration.phone,
+              transportType: lastRegistration.transportType,
+              transportModel: lastRegistration.transportModel,
             }
           });
+
+          let transportInfo = '';
+          if (lastRegistration.transportType && lastRegistration.transportType !== 'spectator') {
+            transportInfo = `🚗 Транспорт: ${getTransportTypeLabel(lastRegistration.transportType)}${lastRegistration.transportModel ? ` (${lastRegistration.transportModel})` : ''}\n`;
+          }
 
           return bot.sendMessage(
             chatId,
@@ -144,8 +151,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
-            `📱 Телефон: ${lastRegistration.phone}\n\n` +
-            `Использовать эти данные для регистрации?`,
+            `📱 Телефон: ${lastRegistration.phone}\n` +
+            transportInfo + 
+            `\nИспользовать эти данные для регистрации?`,
             {
               reply_markup: {
                 inline_keyboard: [
@@ -233,16 +241,24 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             existingData: {
               fullName: lastRegistration.fullName,
               phone: lastRegistration.phone,
+              transportType: lastRegistration.transportType,
+              transportModel: lastRegistration.transportModel,
             }
           });
+
+          let transportInfo = '';
+          if (lastRegistration.transportType && lastRegistration.transportType !== 'spectator') {
+            transportInfo = `🚗 Транспорт: ${getTransportTypeLabel(lastRegistration.transportType)}${lastRegistration.transportModel ? ` (${lastRegistration.transportModel})` : ''}\n`;
+          }
 
           return bot.sendMessage(
             chatId,
             `Вы выбрали: "${event.name}"\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
-            `📱 Телефон: ${lastRegistration.phone}\n\n` +
-            `Использовать эти данные для регистрации?`,
+            `📱 Телефон: ${lastRegistration.phone}\n` +
+            transportInfo + 
+            `\nИспользовать эти данные для регистрации?`,
             {
               reply_markup: {
                 inline_keyboard: [
@@ -300,7 +316,37 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
-        // Use existing data, go straight to transport type selection
+        // Check if we have transport data from previous registration
+        if (state.existingData.transportType && state.existingData.transportType !== 'spectator') {
+          // Complete registration with existing data including transport
+          const userData = {
+            telegramId,
+            telegramNickname: state.telegramNickname,
+            fullName: state.existingData.fullName,
+            phone: state.existingData.phone,
+            transportType: state.existingData.transportType,
+            transportModel: state.existingData.transportModel || null,
+            eventId: state.eventId,
+          };
+
+          const user = await storage.createUser(userData);
+          const event = await storage.getEvent(state.eventId);
+
+          userStates.delete(telegramId);
+          return bot.sendMessage(
+            chatId,
+            `🎉 Поздравляем! Вы успешно зарегистрированы!\n\n` +
+            `📋 Ваши данные:\n` +
+            `📅 Мероприятие: ${event?.name}\n` +
+            `👤 ФИО: ${user.fullName}\n` +
+            `📱 Телефон: ${user.phone}\n` +
+            `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}${user.transportModel ? ` (${user.transportModel})` : ''}\n` +
+            `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
+            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+          );
+        }
+
+        // Use existing data, go straight to transport type selection (for spectators or missing transport data)
         userStates.set(telegramId, {
           ...state,
           step: 'transport_type',
@@ -332,17 +378,105 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
-        // Start fresh registration process
-        userStates.set(telegramId, {
-          step: 'full_name',
-          eventId: state.eventId,
-          telegramNickname: state.telegramNickname,
-        });
-
         return bot.sendMessage(
           chatId,
-          `Хорошо, введём данные заново.\n\nПожалуйста, введите ваши ФИО:`
+          "Что вы хотите изменить?",
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: "👤 ФИО", callback_data: "change_fullname" },
+                  { text: "📱 Телефон", callback_data: "change_phone" }
+                ],
+                [
+                  { text: "🚗 Транспорт", callback_data: "change_transport_direct" },
+                  { text: "🏷️ Модель", callback_data: "change_model" }
+                ],
+                [
+                  { text: "🔄 Всё заново", callback_data: "change_all" }
+                ]
+              ]
+            }
+          }
         );
+      }
+
+      if (data === 'change_fullname') {
+        const state = userStates.get(telegramId);
+        if (state) {
+          userStates.set(telegramId, {
+            ...state,
+            step: 'full_name',
+          });
+          return bot.sendMessage(chatId, "Введите новые ФИО:");
+        }
+      }
+
+      if (data === 'change_phone') {
+        const state = userStates.get(telegramId);
+        if (state) {
+          userStates.set(telegramId, {
+            ...state,
+            step: 'phone',
+            fullName: state.existingData?.fullName || '',
+          });
+          return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7 (XXX) XXX-XX-XX:");
+        }
+      }
+
+      if (data === 'change_transport_direct') {
+        const state = userStates.get(telegramId);
+        if (state) {
+          userStates.set(telegramId, {
+            ...state,
+            step: 'transport_type',
+            fullName: state.existingData?.fullName || '',
+            phone: state.existingData?.phone || '',
+          });
+          return bot.sendMessage(
+            chatId,
+            "Выберите тип транспорта:",
+            {
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "🛴 Моноколесо", callback_data: "transport_monowheel" },
+                    { text: "🛵 Самокат", callback_data: "transport_scooter" }
+                  ],
+                  [
+                    { text: "👁️ Зритель", callback_data: "transport_spectator" }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+      }
+
+      if (data === 'change_model') {
+        const state = userStates.get(telegramId);
+        if (state && state.existingData) {
+          userStates.set(telegramId, {
+            ...state,
+            step: 'transport_model',
+            fullName: state.existingData.fullName,
+            phone: state.existingData.phone,
+            transportType: state.existingData.transportType || 'monowheel',
+          });
+          return bot.sendMessage(chatId, "Введите модель транспорта (или пропустите, написав '-'):");
+        }
+      }
+
+      if (data === 'change_all') {
+        const state = userStates.get(telegramId);
+        if (state) {
+          userStates.set(telegramId, {
+            step: 'full_name',
+            eventId: state.eventId,
+            telegramNickname: state.telegramNickname,
+          });
+          return bot.sendMessage(chatId, "Начинаем регистрацию заново. Введите ваши ФИО:");
+        }
       }
 
       if (data.startsWith('manage_event_')) {
