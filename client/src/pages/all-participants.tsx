@@ -10,7 +10,7 @@ import { ArrowLeft, Search, Edit, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-interface User {
+interface UserWithEvent {
   id: number;
   telegramId: string;
   telegramNickname: string | null;
@@ -22,12 +22,12 @@ interface User {
   isActive: boolean;
   eventId: number;
   createdAt: string;
-  event?: {
+  event: {
     id: number;
     name: string;
     location: string;
     datetime: string;
-  };
+  } | null;
 }
 
 interface AllParticipantsProps {
@@ -42,7 +42,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
   const queryClient = useQueryClient();
 
   // Fetch all participants
-  const { data: participants = [], isLoading } = useQuery<User[]>({
+  const { data: participants = [], isLoading } = useQuery<UserWithEvent[]>({
     queryKey: ["/api/users/all"],
   });
 
@@ -77,7 +77,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
   };
 
   // Filter participants
-  const filteredParticipants = participants.filter((participant: User) => {
+  const filteredParticipants = participants.filter((participant: UserWithEvent) => {
     const matchesSearch = searchQuery === "" || 
       participant.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       participant.phone.includes(searchQuery) ||
@@ -208,7 +208,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredParticipants.map((participant: User) => (
+                {filteredParticipants.map((participant: UserWithEvent) => (
                   <tr key={participant.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div>
@@ -239,9 +239,13 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
                         <div className="font-medium text-gray-900">
                           {participant.event ? participant.event.name : "—"}
                         </div>
-                        {participant.event && (
+                        {participant.event ? (
                           <div className="text-gray-500">
                             {formatDateTime(participant.event.datetime)}
+                          </div>
+                        ) : (
+                          <div className="text-red-500 text-xs">
+                            Мероприятие удалено (ID: {participant.eventId})
                           </div>
                         )}
                       </div>
