@@ -519,8 +519,13 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 <Input
                   id="edit-datetime"
                   type="datetime-local"
-                  value={new Date(editingEvent.datetime).toISOString().slice(0, 16)}
-                  onChange={(e) => setEditingEvent({ ...editingEvent, datetime: new Date(e.target.value) })}
+                  value={editingEvent.datetime instanceof Date 
+                    ? editingEvent.datetime.toISOString().slice(0, 16)
+                    : typeof editingEvent.datetime === 'string' 
+                      ? new Date(editingEvent.datetime).toISOString().slice(0, 16)
+                      : ''
+                  }
+                  onChange={(e) => setEditingEvent({ ...editingEvent, datetime: e.target.value })}
                   required
                 />
               </div>

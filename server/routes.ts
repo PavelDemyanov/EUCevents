@@ -164,6 +164,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!chatIds || !Array.isArray(chatIds) || chatIds.length === 0) {
         return res.status(400).json({ message: "Выберите хотя бы один чат" });
       }
+      
+      // Convert datetime string to proper Date object if needed
+      if (eventData.datetime && typeof eventData.datetime === 'string') {
+        eventData.datetime = new Date(eventData.datetime);
+      }
+      
       const event = await storage.createEvent(eventData, chatIds.map(id => parseInt(id)));
       res.json(event);
     } catch (error: any) {
@@ -175,6 +181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { chatIds, ...eventUpdates } = req.body;
+      
+      // Convert datetime string to proper Date object if needed
+      if (eventUpdates.datetime && typeof eventUpdates.datetime === 'string') {
+        eventUpdates.datetime = new Date(eventUpdates.datetime);
+      }
       
       // Update event data
       if (Object.keys(eventUpdates).length > 0) {
