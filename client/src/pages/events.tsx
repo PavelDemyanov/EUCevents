@@ -353,9 +353,11 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                       {formatDateTime(event.datetime.toString())}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{event.participantCount} участников</div>
-                      <div className="text-xs text-gray-500">
-                        {event.monowheelCount} моноколес, {event.scooterCount} самокатов, {event.spectatorCount} зрителей
+                      <div className="text-sm font-medium text-gray-900">{event.participantCount} участников</div>
+                      <div className="text-xs text-gray-500 space-y-0.5">
+                        <div>🛞 {event.monowheelCount} моноколес</div>
+                        <div>🛴 {event.scooterCount} самокатов</div>
+                        <div>👀 {event.spectatorCount} зрителей</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -363,35 +365,37 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                         {event.isActive ? "Активное" : "Завершено"}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="gap-1"
-                        onClick={() => onViewParticipants?.(event.id, event.name)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Участники
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="gap-1"
-                        onClick={() => handleEditEvent(event)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        Редактировать
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="gap-1 text-red-600 hover:text-red-900"
-                        onClick={() => handleDeleteEvent(event.id)}
-                        disabled={deleteEventMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Удалить
-                      </Button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-8 h-8 p-0"
+                          onClick={() => onViewParticipants?.(event.id, event.name)}
+                          title="Участники"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-8 h-8 p-0"
+                          onClick={() => handleEditEvent(event)}
+                          title="Редактировать"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-8 h-8 p-0 text-red-600 hover:text-red-900"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          disabled={deleteEventMutation.isPending}
+                          title="Удалить"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
