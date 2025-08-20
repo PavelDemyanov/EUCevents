@@ -548,6 +548,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check conflicts
       const conflicts = await storage.checkFixedNumberConflicts(bindingData.participantNumber);
       
+      // Check if this telegram nickname already has a binding
+      const existingUserBinding = await storage.getFixedNumberByTelegramNickname(bindingData.telegramNickname);
+      if (existingUserBinding) {
+        return res.status(400).json({ 
+          message: `Пользователь @${bindingData.telegramNickname} уже имеет привязку к номеру ${existingUserBinding.participantNumber}. Дублирование привязок недопустимо.`,
+          existingNumber: existingUserBinding.participantNumber
+        });
+      }
+
       // Check if this number is already bound to another user
       const existingBinding = await storage.getFixedNumberByParticipantNumber(bindingData.participantNumber);
       if (existingBinding && existingBinding.telegramNickname !== bindingData.telegramNickname) {

@@ -693,11 +693,11 @@ export class DatabaseStorage implements IStorage {
     await db.delete(fixedNumberBindings).where(eq(fixedNumberBindings.id, id));
   }
 
-  async getFixedNumberByTelegramNickname(nickname: string): Promise<FixedNumberBinding | undefined> {
+  async getFixedNumberByTelegramNickname(telegramNickname: string): Promise<FixedNumberBinding | undefined> {
     const [binding] = await db
       .select()
       .from(fixedNumberBindings)
-      .where(eq(fixedNumberBindings.telegramNickname, nickname));
+      .where(eq(fixedNumberBindings.telegramNickname, telegramNickname));
     return binding;
   }
 
@@ -708,6 +708,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(fixedNumberBindings.participantNumber, participantNumber));
     return binding;
   }
+
+
 
   // Admin operations
   async getAdminByUsername(username: string): Promise<AdminUser | undefined> {
