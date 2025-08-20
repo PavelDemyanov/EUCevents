@@ -38,7 +38,7 @@ export default function PublicEvent() {
   const generatePdfMutation = useMutation({
     mutationFn: async () => {
       if (!eventData?.event?.id) throw new Error('Event not found');
-      const response = await fetch(`/api/events/${eventData.event.id}/pdf`);
+      const response = await fetch(`/api/public/events/${eventData.event.id}/pdf`);
       if (!response.ok) throw new Error('Failed to generate PDF');
       return await response.blob();
     },
@@ -68,7 +68,7 @@ export default function PublicEvent() {
   const generateTransportPdfMutation = useMutation({
     mutationFn: async () => {
       if (!eventData?.event?.id) throw new Error('Event not found');
-      const response = await fetch(`/api/events/${eventData.event.id}/pdf-transport`);
+      const response = await fetch(`/api/public/events/${eventData.event.id}/pdf-transport`);
       if (!response.ok) throw new Error('Failed to generate transport PDF');
       return await response.blob();
     },

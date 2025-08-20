@@ -462,6 +462,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public PDF generation routes (with masked phone numbers)
+  app.get("/api/public/events/:eventId/pdf", async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { generateParticipantsPDF } = await import('./pdf-generator');
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Мероприятие не найдено" });
+      }
+      
+      // Generate PDF with masked phone numbers
+      const pdfBuffer = await generateParticipantsPDF(eventId, storage, true);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="participants-${eventId}-public.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating public PDF:", error);
+      res.status(500).json({ message: "Не удалось создать PDF" });
+    }
+  });
+
+  app.get("/api/public/events/:eventId/pdf-transport", async (req, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const { generateTransportGroupedPDF } = await import('./pdf-generator');
+      
+      // Generate PDF with masked phone numbers
+      const pdfBuffer = await generateTransportGroupedPDF(eventId, true);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="participants-transport-${eventId}-public.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating public transport PDF:", error);
+      res.status(500).json({ message: "Не удалось создать PDF по транспорту" });
+    }
+  });
+
   // Group notification route
   app.post("/api/events/:eventId/notify-group", requireAuth, async (req, res) => {
     try {

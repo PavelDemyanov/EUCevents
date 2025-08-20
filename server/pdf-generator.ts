@@ -22,9 +22,26 @@ function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
+// Mask phone number for public sharing: +7 (XXX) XXX-XX-XX -> +7 (XXX) ***-**-**
+function maskPhoneNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  const formatted = formatPhoneNumber(phone);
+  
+  // Mask the formatted phone: +7 (123) 456-78-90 -> +7 (123) ***-**-**
+  const match = formatted.match(/^(\+7 \(\d{3}\)) (.+)$/);
+  if (match) {
+    return `${match[1]} ***-**-**`;
+  }
+  
+  // If not in expected format, return masked version
+  return '***-**-**';
+}
+
 export async function generateParticipantsPDF(
   eventId: number,
-  storage: any
+  storage: any,
+  maskPhones: boolean = false
 ): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
@@ -158,10 +175,13 @@ export async function generateParticipantsPDF(
         const fontSize = 9;
         doc.fontSize(fontSize);
         
+        // Format phone number (mask if needed for public sharing)
+        const phoneDisplay = maskPhones ? maskPhoneNumber(participant.phone) : formatPhoneNumber(participant.phone);
+        
         // Measure text heights for proper row spacing
         const nameHeight = doc.heightOfString(fullName, { width: 150 });
         const nicknameHeight = doc.heightOfString(nickname, { width: 80 });
-        const phoneHeight = doc.heightOfString(formatPhoneNumber(participant.phone), { width: 110 });
+        const phoneHeight = doc.heightOfString(phoneDisplay, { width: 110 });
         const transportHeight = doc.heightOfString(transportTextUtf8, { width: 100 });
         
         const maxHeight = Math.max(nameHeight, nicknameHeight, phoneHeight, transportHeight, fontSize);
@@ -170,7 +190,7 @@ export async function generateParticipantsPDF(
         doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
            .text(fullName, itemNameX, currentY, { width: 150 })
            .text(nickname, itemNicknameX, currentY, { width: 80 })
-           .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY, { width: 110 })
+           .text(phoneDisplay, itemPhoneX, currentY, { width: 110 })
            .text(transportTextUtf8, itemTransportX, currentY, { width: 100 });
 
         currentY += rowHeight;
@@ -262,7 +282,7 @@ export async function generateParticipantListPDF(eventId: number): Promise<Buffe
 }
 
 // Generate PDF grouped by transport type
-export async function generateTransportGroupedPDF(eventId: number): Promise<Buffer> {
+export async function generateTransportGroupedPDF(eventId: number, maskPhones: boolean = false): Promise<Buffer> {
   return new Promise(async (resolve) => {
     try {
       const event = await storage.getEvent(eventId);
@@ -415,10 +435,13 @@ export async function generateTransportGroupedPDF(eventId: number): Promise<Buff
           const fontSize = 9;
           doc.fontSize(fontSize);
           
+          // Format phone number (mask if needed for public sharing)
+          const phoneDisplay = maskPhones ? maskPhoneNumber(participant.phone) : formatPhoneNumber(participant.phone);
+          
           // Measure text heights for proper row spacing
           const nameHeight = doc.heightOfString(fullName, { width: 150 });
           const nicknameHeight = doc.heightOfString(nickname, { width: 80 });
-          const phoneHeight = doc.heightOfString(formatPhoneNumber(participant.phone), { width: 110 });
+          const phoneHeight = doc.heightOfString(phoneDisplay, { width: 110 });
           const modelHeight = doc.heightOfString(modelTextUtf8, { width: 100 });
           
           const maxHeight = Math.max(nameHeight, nicknameHeight, phoneHeight, modelHeight, fontSize);
@@ -427,7 +450,7 @@ export async function generateTransportGroupedPDF(eventId: number): Promise<Buff
           doc.text(participant.participantNumber?.toString() || '', itemCodeX, currentY)
              .text(fullName, itemNameX, currentY, { width: 150 })
              .text(nickname, itemNicknameX, currentY, { width: 80 })
-             .text(formatPhoneNumber(participant.phone), itemPhoneX, currentY, { width: 110 })
+             .text(phoneDisplay, itemPhoneX, currentY, { width: 110 })
              .text(modelTextUtf8, itemTransportX, currentY, { width: 100 });
 
           currentY += rowHeight;
