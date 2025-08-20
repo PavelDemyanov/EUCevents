@@ -502,6 +502,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unique locations for event creation
+  app.get("/api/events/locations", requireAuth, async (req, res) => {
+    try {
+      const locations = await storage.getUniqueLocations();
+      res.json(locations);
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+      res.status(500).json({ message: "Ошибка получения мест проведения" });
+    }
+  });
+
   // Group notification route
   app.post("/api/events/:eventId/notify-group", requireAuth, async (req, res) => {
     try {

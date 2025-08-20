@@ -29,6 +29,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     datetime: "",
     chatIds: [] as number[]
   });
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,6 +50,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     queryKey: ["/api/stats/today"],
   });
 
+  const { data: locations = [] } = useQuery({
+    queryKey: ["/api/events/locations"],
+  });
+
   const createEventMutation = useMutation({
     mutationFn: async (eventData: typeof newEvent) => {
       await apiRequest("/api/events", {
@@ -60,6 +65,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowCreateDialog(false);
       setNewEvent({ name: "", location: "", datetime: "", chatIds: [] });
+      setIsCustomLocation(false);
       toast({
         title: "Успешно",
         description: "Мероприятие создано",
@@ -431,13 +437,43 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
             </div>
             <div>
               <Label htmlFor="location">Место проведения</Label>
-              <Input
-                id="location"
-                value={newEvent.location}
-                onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                placeholder="Введите место проведения"
-                required
-              />
+              <div className="space-y-2">
+                {locations.length > 0 && (
+                  <Select 
+                    value={isCustomLocation ? "" : newEvent.location} 
+                    onValueChange={(value) => {
+                      if (value === "custom") {
+                        setIsCustomLocation(true);
+                        setNewEvent({ ...newEvent, location: "" });
+                      } else {
+                        setIsCustomLocation(false);
+                        setNewEvent({ ...newEvent, location: value });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите место или введите новое" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((location: string) => (
+                        <SelectItem key={location} value={location}>
+                          {location}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">Ввести новое место...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                {(isCustomLocation || locations.length === 0) && (
+                  <Input
+                    id="location"
+                    value={newEvent.location}
+                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                    placeholder="Введите место проведения"
+                    required
+                  />
+                )}
+              </div>
             </div>
             <div>
               <Label htmlFor="datetime">Дата и время</Label>

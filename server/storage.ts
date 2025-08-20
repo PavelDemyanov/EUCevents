@@ -55,6 +55,7 @@ export interface IStorage {
   updateEventChats(eventId: number, chatIds: number[]): Promise<void>;
   deleteEvent(id: number): Promise<void>;
   generateShareCode(eventId: number): Promise<string>;
+  getUniqueLocations(): Promise<string[]>;
   
   // Event-Chat operations
   getEventChats(eventId: number): Promise<Chat[]>;
@@ -390,6 +391,18 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async getUniqueLocations(): Promise<string[]> {
+    const result = await db
+      .selectDistinct({ location: events.location })
+      .from(events)
+      .where(isNotNull(events.location))
+      .orderBy(events.location);
+    
+    return result
+      .map(row => row.location)
+      .filter(location => location && location.trim().length > 0);
   }
 
   async generateShareCode(eventId: number): Promise<string> {
