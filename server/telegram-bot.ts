@@ -451,7 +451,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   { text: "📱 Телефон", callback_data: "change_phone" }
                 ],
                 [
-                  { text: "🚗 Транспорт", callback_data: "change_transport_direct" },
+                  { text: "⚙️ Изменить транспорт/стать зрителем", callback_data: "change_transport_direct" },
                   { text: "🏷️ Модель", callback_data: "change_model" }
                 ],
                 [
@@ -569,7 +569,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               inline_keyboard: [
                 [{ text: "👤 Изменить ФИО", callback_data: `edit_name_${eventId}` }],
                 [{ text: "📱 Изменить телефон", callback_data: `edit_phone_${eventId}` }],
-                [{ text: "🚗 Изменить транспорт", callback_data: `edit_transport_${eventId}` }],
+                [{ text: "⚙️ Изменить транспорт/стать зрителем", callback_data: `edit_transport_${eventId}` }],
                 [{ text: "❌ Отказаться от участия", callback_data: `cancel_event_${eventId}` }],
                 [{ text: "🔙 Назад", callback_data: "back_to_main" }]
               ]
