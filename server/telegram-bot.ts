@@ -689,7 +689,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               userStates.delete(telegramId);
               return bot.sendMessage(
                 chatId,
-                `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+                `✅ Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
               );
             }
           }
@@ -950,7 +950,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (userRegistration) {
           await storage.updateUser(userRegistration.id, { fullName: text });
           userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `ФИО успешно изменены на: ${text}`);
+          return bot.sendMessage(chatId, `✅ ФИО успешно изменено на: ${text}`);
         }
       }
 
@@ -969,7 +969,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (userRegistration) {
           await storage.updateUser(userRegistration.id, { phone: normalizedPhone });
           userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
+          return bot.sendMessage(chatId, `✅ Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
         }
       }
 
@@ -989,7 +989,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           userStates.delete(telegramId);
           return bot.sendMessage(
             chatId,
-            `Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
+            `✅ Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
           );
         }
       }
