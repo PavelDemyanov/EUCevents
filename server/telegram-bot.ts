@@ -482,7 +482,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             step: 'phone',
             fullName: state.existingData?.fullName || '',
           });
-          return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7 (XXX) XXX-XX-XX:");
+          return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
         }
       }
 
@@ -597,7 +597,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname: query.from?.username || undefined,
         });
         
-        return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7 (XXX) XXX-XX-XX:");
+        return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
       }
 
       if (data.startsWith('edit_transport_')) {

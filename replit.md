@@ -7,6 +7,7 @@ This is a full-stack web application with an integrated Telegram bot for managin
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XXXXXXXXXX, 7XXXXXXXXXX) but store as 7XXXXXXXXXX and display as +7 (XXX) XXX-XX-XX throughout the system.
 
 ## System Architecture
 
