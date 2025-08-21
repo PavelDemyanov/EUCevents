@@ -356,8 +356,8 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                     <td className="px-6 py-4">
                       <div className="font-medium text-gray-900">{event.name}</div>
                       {event.description && (
-                        <div className="text-sm text-gray-600 mt-1 max-w-xs truncate" title={event.description}>
-                          {event.description}
+                        <div className="text-sm text-gray-600 mt-1 max-w-48 truncate" title={event.description}>
+                          {event.description.length > 225 ? `${event.description.substring(0, 225)}...` : event.description}
                         </div>
                       )}
                       <div className="text-xs text-gray-500 mt-1">ID: #{event.id}</div>
