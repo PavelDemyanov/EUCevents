@@ -214,7 +214,7 @@ export default function PublicEvent() {
         </div>
 
         {/* Statistics */}
-        <div className={`grid gap-4 mb-8 ${event.allowedTransportTypes?.length === 1 ? 'grid-cols-1 md:grid-cols-1' : event.allowedTransportTypes?.length === 2 ? 'grid-cols-1 md:grid-cols-2' : event.allowedTransportTypes?.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4'}`}>
+        <div className={`grid gap-4 mb-8 grid-cols-2 ${event.allowedTransportTypes?.length === 1 ? 'md:grid-cols-1' : event.allowedTransportTypes?.length === 2 ? 'md:grid-cols-2' : event.allowedTransportTypes?.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-blue-600">
