@@ -74,13 +74,14 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 
 - **Electric Board Transport Type (Completed)**: Added comprehensive support for "электро-борд" (electric board/e-board) transport type
   - Updated database schema and all related components to support new transport type "eboard"
-  - Enhanced Telegram bot with electric board option (🏄 icon) in transport selection menus
+  - Enhanced Telegram bot with electric board option (🛹 icon) in transport selection menus
   - Added electric board statistics display in participants page with orange color scheme
   - Updated PDF generation to include electric board count in summary sections
   - Enhanced public event pages with electric board support and proper color coding
   - Added CSS styling for electric board participant number badges (orange theme)
   - Fixed all TypeScript compilation errors across the system
-  - System now supports 4 transport types: monowheel (🛞), scooter (🛴), electric board (🏄), spectator (👀)
+  - Changed electric board emoji from 🏄 to 🛹 across all interfaces (August 21, 2025)
+  - System now supports 4 transport types: monowheel (🛞), scooter (🛴), electric board (🛹), spectator (👀)
 
 - **Previous Updates (August 20, 2025)**:
   - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)

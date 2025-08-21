@@ -387,7 +387,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                       <div className="text-xs text-gray-500 space-y-0.5">
                         <div>🛞 {event.monowheelCount} моноколес</div>
                         <div>🛴 {event.scooterCount} самокатов</div>
-                        <div>🏄 {event.eboardCount || 0} электро-бордов</div>
+                        <div>🛹 {event.eboardCount || 0} электро-бордов</div>
                         <div>👀 {event.spectatorCount} зрителей</div>
                       </div>
                     </td>
