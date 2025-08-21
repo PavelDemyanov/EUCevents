@@ -1324,40 +1324,60 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     }
   });
 
-  // Start polling manually with retry logic
-  let retryCount = 0;
-  const maxRetries = 3;
+  // Start polling with more aggressive conflict resolution
+  const MAX_POLLING_ATTEMPTS = 5;
+  let attempts = 0;
   
-  const startPollingWithRetry = async () => {
+  const tryStartPolling = async (): Promise<boolean> => {
+    attempts++;
+    console.log(`Attempting to start polling (attempt ${attempts}/${MAX_POLLING_ATTEMPTS})`);
+    
     try {
-      await bot.startPolling({
-        restart: true,
-        polling: {
-          autoStart: false,
-          params: {
-            timeout: 10,
-            limit: 100,
-          }
+      // Stop any existing polling first
+      try {
+        await bot.stopPolling();
+        console.log('Stopped any existing polling');
+      } catch (e) {
+        console.log('No existing polling to stop');
+      }
+      
+      // Wait a bit to ensure cleanup
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Try to clear any pending updates
+      try {
+        const updates = await bot.getUpdates({ timeout: 1, limit: 100 });
+        if (updates.length > 0) {
+          console.log(`Cleared ${updates.length} pending updates`);
         }
-      });
+      } catch (e) {
+        console.log('No updates to clear');
+      }
+      
+      // Start polling with simpler configuration
+      await bot.startPolling();
       console.log(`Telegram bot started successfully with token: ${token.substring(0, 10)}...`);
       return true;
-    } catch (error: any) {
-      console.log(`Polling attempt ${retryCount + 1} failed:`, error.message);
       
-      if (error.message.includes('Conflict') && retryCount < maxRetries) {
-        retryCount++;
-        console.log(`Retrying in ${retryCount * 2} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
-        return await startPollingWithRetry();
-      } else {
-        console.error('Failed to start bot polling after retries:', error);
-        return false;
+    } catch (error: any) {
+      console.log(`Polling attempt ${attempts} failed:`, error.message);
+      
+      if (error.message.includes('Conflict') && attempts < MAX_POLLING_ATTEMPTS) {
+        const delay = attempts * 3000; // Increasing delay
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return await tryStartPolling();
       }
+      
+      console.error(`Failed to start polling after ${attempts} attempts`);
+      return false;
     }
   };
   
-  await startPollingWithRetry();
+  const success = await tryStartPolling();
+  if (!success) {
+    console.error('Bot polling could not be started. Bot will not respond to messages.');
+  }
 
   // Export bot instance for external use
   return bot;
