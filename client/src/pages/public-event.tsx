@@ -284,7 +284,7 @@ export default function PublicEvent() {
                           className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                            <div className="w-10 h-10 flex-shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
                               {participant.participantNumber}
                             </div>
                             <div>

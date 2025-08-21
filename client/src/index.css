@@ -129,7 +129,10 @@
 }
 
 .participant-number {
-  @apply inline-flex items-center justify-center w-8 h-8 rounded-full font-medium;
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-full font-medium text-xs;
+  flex-shrink: 0;
+  min-width: 2rem;
+  min-height: 2rem;
 }
 
 .participant-number-monowheel {
