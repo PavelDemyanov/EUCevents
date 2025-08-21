@@ -187,9 +187,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Выберите хотя бы один чат" });
       }
       
+      console.log("=== POST EVENT CREATE ===", { eventData });
+      
       // Convert datetime string to proper Date object if needed
       if (eventData.datetime && typeof eventData.datetime === 'string') {
         eventData.datetime = new Date(eventData.datetime);
+      }
+      
+      // Ensure allowedTransportTypes is properly formatted
+      if (eventData.allowedTransportTypes) {
+        if (typeof eventData.allowedTransportTypes === 'string') {
+          try {
+            eventData.allowedTransportTypes = JSON.parse(eventData.allowedTransportTypes);
+          } catch (e) {
+            console.error("Failed to parse allowedTransportTypes:", eventData.allowedTransportTypes);
+            return res.status(400).json({ message: "Неверный формат типов транспорта" });
+          }
+        }
+        // Ensure it's an array
+        if (!Array.isArray(eventData.allowedTransportTypes)) {
+          console.error("allowedTransportTypes is not an array:", eventData.allowedTransportTypes);
+          return res.status(400).json({ message: "Типы транспорта должны быть массивом" });
+        }
+        console.log("=== PROCESSED allowedTransportTypes ===", eventData.allowedTransportTypes);
       }
       
       const event = await storage.createEvent(eventData, chatIds.map(id => parseInt(id)));
@@ -204,9 +224,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const { chatIds, ...eventUpdates } = req.body;
       
+      console.log("=== PUT EVENT UPDATE ===", { id, eventUpdates });
+      
       // Convert datetime string to proper Date object if needed
       if (eventUpdates.datetime && typeof eventUpdates.datetime === 'string') {
         eventUpdates.datetime = new Date(eventUpdates.datetime);
+      }
+      
+      // Ensure allowedTransportTypes is properly formatted
+      if (eventUpdates.allowedTransportTypes) {
+        if (typeof eventUpdates.allowedTransportTypes === 'string') {
+          try {
+            eventUpdates.allowedTransportTypes = JSON.parse(eventUpdates.allowedTransportTypes);
+          } catch (e) {
+            console.error("Failed to parse allowedTransportTypes:", eventUpdates.allowedTransportTypes);
+            return res.status(400).json({ message: "Неверный формат типов транспорта" });
+          }
+        }
+        // Ensure it's an array
+        if (!Array.isArray(eventUpdates.allowedTransportTypes)) {
+          console.error("allowedTransportTypes is not an array:", eventUpdates.allowedTransportTypes);
+          return res.status(400).json({ message: "Типы транспорта должны быть массивом" });
+        }
+        console.log("=== PROCESSED allowedTransportTypes ===", eventUpdates.allowedTransportTypes);
       }
       
       // Update event data
