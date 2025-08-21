@@ -252,32 +252,40 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Показано {startIndex + 1} до {Math.min(startIndex + pageSize, sortedData.length)} из{" "}
-            {sortedData.length} записей
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+          <div className="text-xs md:text-sm text-gray-700 order-2 md:order-1">
+            <span className="hidden md:inline">
+              Показано {startIndex + 1} до {Math.min(startIndex + pageSize, sortedData.length)} из{" "}
+              {sortedData.length} записей
+            </span>
+            <span className="md:hidden text-center block">
+              {startIndex + 1}-{Math.min(startIndex + pageSize, sortedData.length)} из {sortedData.length}
+            </span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-1 md:space-x-2 order-1 md:order-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
+              className="px-2 md:px-3"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Предыдущая
+              <ChevronLeft className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Предыдущая</span>
             </Button>
-            <span className="text-sm text-gray-700">
-              Страница {currentPage} из {totalPages}
+            <span className="text-xs md:text-sm text-gray-700 px-2 md:px-3 whitespace-nowrap">
+              <span className="hidden md:inline">Страница {currentPage} из {totalPages}</span>
+              <span className="md:hidden">{currentPage} из {totalPages}</span>
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
+              className="px-2 md:px-3"
             >
-              Следующая
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <span className="hidden md:inline">Следующая</span>
+              <ChevronRight className="h-4 w-4 md:ml-1" />
             </Button>
           </div>
         </div>
