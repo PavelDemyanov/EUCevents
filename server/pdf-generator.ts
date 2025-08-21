@@ -328,12 +328,14 @@ export async function generateTransportGroupedPDF(eventId: number, maskPhones: b
       const groupedParticipants = {
         monowheel: activeParticipants.filter(p => p.transportType === 'monowheel'),
         scooter: activeParticipants.filter(p => p.transportType === 'scooter'),
+        eboard: activeParticipants.filter(p => p.transportType === 'eboard'),
         spectator: activeParticipants.filter(p => p.transportType === 'spectator')
       };
 
       const transportTypes = [
         { key: 'monowheel', label: 'Моноколеса' },
         { key: 'scooter', label: 'Самокаты' },
+        { key: 'eboard', label: 'Электро-борды' },
         { key: 'spectator', label: 'Зрители' }
       ];
 
