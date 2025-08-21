@@ -51,13 +51,19 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 
 ### Recent Updates (August 21, 2025)
 
-- **Bot UX Improvements (In Progress)**: Enhanced Telegram bot user experience
+- **Bot UX Improvements (Completed)**: Enhanced Telegram bot user experience
   - Added "🏠 Домой" button after registration/editing completion for easy navigation
   - Implemented arbitrary message handling - bot now responds to any message (like "привет", "алло") with current events list
+  - Replaced text command links with user-friendly buttons in bot responses
   - Fixed TypeScript compilation errors in telegram-bot.ts
   - Improved bot polling conflict management to prevent multiple bot instances
   - Added webhook clearing on bot startup to resolve polling conflicts
   - Enhanced error handling and logging for bot message processing
+  
+- **Location Dropdown Fix (Completed)**: Fixed event creation form location dropdown
+  - Location dropdown now correctly shows all unique locations from existing events
+  - Added detailed logging for location API debugging
+  - Confirmed proper data flow from database through API to frontend
 
 - **Previous Updates (August 20, 2025)**:
   - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
