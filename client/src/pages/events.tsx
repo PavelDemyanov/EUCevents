@@ -34,6 +34,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     description: "",
     location: "",
     datetime: "",
+    allowedTransportTypes: ["monowheel", "scooter", "eboard", "spectator"] as string[],
     chatIds: [] as number[]
   });
   const [isCustomLocation, setIsCustomLocation] = useState(false);
@@ -71,7 +72,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowCreateDialog(false);
-      setNewEvent({ name: "", description: "", location: "", datetime: "", chatIds: [] });
+      setNewEvent({ name: "", description: "", location: "", datetime: "", allowedTransportTypes: ["monowheel", "scooter", "eboard", "spectator"], chatIds: [] });
       setIsCustomLocation(false);
       toast({
         title: "Успешно",
@@ -153,6 +154,14 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       });
       return;
     }
+    if (newEvent.allowedTransportTypes.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите хотя бы один тип транспорта",
+        variant: "destructive",
+      });
+      return;
+    }
     if (newEvent.chatIds.length === 0) {
       toast({
         title: "Ошибка",
@@ -167,6 +176,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const handleEditEvent = (event: EventWithStats) => {
     setEditingEvent({
       ...event,
+      allowedTransportTypes: event.allowedTransportTypes || ["monowheel", "scooter", "eboard", "spectator"],
       chatIds: event.chats?.map(chat => chat.id) || []
     });
     setShowEditDialog(true);
@@ -183,6 +193,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
         description: editingEvent.description,
         location: editingEvent.location,
         datetime: editingEvent.datetime,
+        allowedTransportTypes: editingEvent.allowedTransportTypes,
         chatIds: editingEvent.chatIds || [],
         isActive: editingEvent.isActive,
       },
@@ -515,6 +526,44 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
               />
             </div>
             <div>
+              <Label>Типы транспорта</Label>
+              <div className="space-y-2 border rounded-md p-3">
+                <p className="text-xs text-gray-600 mb-2">Выберите типы транспорта, которые могут участвовать в мероприятии:</p>
+                {[
+                  { value: "monowheel", label: "🛞 Моноколесо", emoji: "🛞" },
+                  { value: "scooter", label: "🛴 Самокат", emoji: "🛴" },
+                  { value: "eboard", label: "🏄 Электро-борд", emoji: "🏄" },
+                  { value: "spectator", label: "👀 Зритель", emoji: "👀" }
+                ].map((transport) => (
+                  <div key={transport.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`transport-${transport.value}`}
+                      checked={newEvent.allowedTransportTypes.includes(transport.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewEvent({ 
+                            ...newEvent, 
+                            allowedTransportTypes: [...newEvent.allowedTransportTypes, transport.value] 
+                          });
+                        } else {
+                          setNewEvent({ 
+                            ...newEvent, 
+                            allowedTransportTypes: newEvent.allowedTransportTypes.filter(type => type !== transport.value) 
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor={`transport-${transport.value}`} className="text-sm cursor-pointer">
+                      {transport.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {newEvent.allowedTransportTypes.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">Выберите хотя бы один тип транспорта</p>
+              )}
+            </div>
+            <div>
               <Label>Telegram-чаты</Label>
               <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
                 {(chats as any[]).length === 0 ? (
@@ -621,6 +670,45 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                   onChange={(e) => setEditingEvent({ ...editingEvent, datetime: new Date(e.target.value) })}
                   required
                 />
+              </div>
+              <div>
+                <Label>Типы транспорта</Label>
+                <div className="space-y-2 border rounded-md p-3">
+                  <p className="text-xs text-gray-600 mb-2">Выберите типы транспорта, которые могут участвовать в мероприятии:</p>
+                  {[
+                    { value: "monowheel", label: "🛞 Моноколесо", emoji: "🛞" },
+                    { value: "scooter", label: "🛴 Самокат", emoji: "🛴" },
+                    { value: "eboard", label: "🏄 Электро-борд", emoji: "🏄" },
+                    { value: "spectator", label: "👀 Зритель", emoji: "👀" }
+                  ].map((transport) => (
+                    <div key={transport.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-transport-${transport.value}`}
+                        checked={(editingEvent.allowedTransportTypes || []).includes(transport.value)}
+                        onCheckedChange={(checked) => {
+                          const currentTypes = editingEvent.allowedTransportTypes || [];
+                          if (checked) {
+                            setEditingEvent({ 
+                              ...editingEvent, 
+                              allowedTransportTypes: [...currentTypes, transport.value] 
+                            });
+                          } else {
+                            setEditingEvent({ 
+                              ...editingEvent, 
+                              allowedTransportTypes: currentTypes.filter(type => type !== transport.value) 
+                            });
+                          }
+                        }}
+                      />
+                      <label htmlFor={`edit-transport-${transport.value}`} className="text-sm cursor-pointer">
+                        {transport.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {(!editingEvent.allowedTransportTypes || editingEvent.allowedTransportTypes.length === 0) && (
+                  <p className="text-xs text-red-500 mt-1">Выберите хотя бы один тип транспорта</p>
+                )}
               </div>
               <div>
                 <Label>Telegram-чаты</Label>

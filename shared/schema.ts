@@ -58,6 +58,7 @@ export const events = pgTable("events", {
   description: varchar("description", { length: 900 }),
   location: text("location").notNull(),
   datetime: timestamp("datetime").notNull(),
+  allowedTransportTypes: text("allowed_transport_types").array().default(sql`ARRAY['monowheel', 'scooter', 'eboard', 'spectator']`),
   shareCode: varchar("share_code", { length: 50 }).unique(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -169,6 +170,7 @@ export const insertEventSchema = createInsertSchema(events, {
   description: z.string().max(900, "Описание не должно превышать 900 символов").optional(),
   location: z.string().min(2, "Место проведения обязательно"),
   datetime: z.string().transform((str) => new Date(str)),
+  allowedTransportTypes: z.array(z.enum(["monowheel", "scooter", "eboard", "spectator"])).min(1, "Выберите хотя бы один тип транспорта").optional(),
 }).omit({
   id: true,
   shareCode: true,
