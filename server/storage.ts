@@ -372,10 +372,10 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date(),
     };
     
-    // Handle allowedTransportTypes specially for JSON column
+    // Handle allowedTransportTypes as PostgreSQL array (no conversion needed)
     if (event.allowedTransportTypes !== undefined) {
-      preparedEvent.allowedTransportTypes = JSON.stringify(event.allowedTransportTypes);
-      console.log("=== CONVERTED allowedTransportTypes to JSON string ===", preparedEvent.allowedTransportTypes);
+      preparedEvent.allowedTransportTypes = event.allowedTransportTypes;
+      console.log("=== USING allowedTransportTypes as array ===", preparedEvent.allowedTransportTypes);
     }
     
     const [createdEvent] = await db
@@ -400,10 +400,10 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date(),
     };
     
-    // Handle allowedTransportTypes specially for JSON column
+    // Handle allowedTransportTypes as PostgreSQL array (no conversion needed)
     if (updates.allowedTransportTypes !== undefined) {
-      preparedUpdates.allowedTransportTypes = JSON.stringify(updates.allowedTransportTypes);
-      console.log("=== CONVERTED allowedTransportTypes to JSON string ===", preparedUpdates.allowedTransportTypes);
+      preparedUpdates.allowedTransportTypes = updates.allowedTransportTypes;
+      console.log("=== USING allowedTransportTypes as array ===", preparedUpdates.allowedTransportTypes);
     }
     
     const [updatedEvent] = await db
