@@ -395,22 +395,27 @@ export class DatabaseStorage implements IStorage {
 
   async getUniqueLocations(): Promise<string[]> {
     try {
-      console.log("Executing getUniqueLocations query...");
+      console.log("=== EXECUTING getUniqueLocations QUERY ===");
+      
+      // First, let's see all events
+      const allEvents = await db.select().from(events);
+      console.log("=== ALL EVENTS ===", allEvents.map(e => ({ id: e.id, name: e.name, location: e.location })));
+      
       const result = await db
         .selectDistinct({ location: events.location })
         .from(events)
         .where(isNotNull(events.location));
       
-      console.log("Raw query result:", result);
+      console.log("=== RAW QUERY RESULT ===", result);
       const locations = result
         .map(row => row.location)
         .filter(location => location && location.trim().length > 0)
         .sort();
       
-      console.log("Processed locations:", locations);
+      console.log("=== PROCESSED LOCATIONS ===", locations);
       return locations;
     } catch (error) {
-      console.error("Error in getUniqueLocations:", error);
+      console.error("=== ERROR IN getUniqueLocations ===", error);
       throw error;
     }
   }

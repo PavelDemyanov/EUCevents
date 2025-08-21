@@ -156,12 +156,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get unique locations for event creation (MUST be before /api/events/:id route)
   app.get("/api/events/locations", requireAuth, async (req, res) => {
     try {
-      console.log("Fetching unique locations...");
+      console.log("=== FETCHING UNIQUE LOCATIONS ===");
       const locations = await storage.getUniqueLocations();
-      console.log("Found locations:", locations);
+      console.log("=== FOUND LOCATIONS ===", locations);
+      console.log("=== LOCATIONS COUNT ===", locations.length);
       res.json(locations);
     } catch (error) {
-      console.error("Error fetching locations:", error);
+      console.error("=== ERROR FETCHING LOCATIONS ===", error);
       res.status(500).json({ message: "Ошибка получения мест проведения" });
     }
   });
