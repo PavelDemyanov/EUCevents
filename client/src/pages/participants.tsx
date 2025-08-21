@@ -328,6 +328,13 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               {event && (
                 <div>
                   <CardTitle className="text-lg md:text-2xl mb-2">{(event as any)?.name || 'Мероприятие'}</CardTitle>
+                  {(event as any)?.description && (
+                    <div className="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-md">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        📝 {(event as any).description}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-1 md:space-y-0 text-xs md:text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       📍 {(event as any)?.location || 'Место не указано'}

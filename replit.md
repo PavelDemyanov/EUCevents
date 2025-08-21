@@ -51,6 +51,13 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 
 ### Recent Updates (August 21, 2025)
 
+- **Event Description Field (Completed)**: Added comprehensive description support for events
+  - Added 900-character description field to events database schema
+  - Enhanced event creation and editing forms with textarea and character counter
+  - Added description display in events list, participant pages, and public event pages
+  - Integrated description display in Telegram bot messages for enhanced user context
+  - Professional UI design with consistent styling across all pages
+
 - **Bot UX Improvements (Completed)**: Enhanced Telegram bot user experience
   - Added "🏠 Домой" button after registration/editing completion for easy navigation
   - Implemented arbitrary message handling - bot now responds to any message (like "привет", "алло") with current events list

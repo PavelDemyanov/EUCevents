@@ -687,6 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         event: {
           id: event.id,
           name: event.name,
+          description: event.description,
           location: event.location,
           datetime: event.datetime
         },

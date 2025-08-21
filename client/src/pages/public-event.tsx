@@ -11,6 +11,7 @@ interface PublicEventData {
   event: {
     id: number;
     name: string;
+    description?: string;
     location: string;
     datetime: string;
   };
@@ -154,6 +155,14 @@ export default function PublicEvent() {
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             {event.name}
           </h1>
+          
+          {event.description && (
+            <div className="max-w-3xl mx-auto mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 rounded-r-lg">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                📝 {event.description}
+              </p>
+            </div>
+          )}
           
           <div className="flex flex-wrap justify-center gap-6 text-gray-600 dark:text-gray-300 mb-6">
             <div className="flex items-center gap-2">
