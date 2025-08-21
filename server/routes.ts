@@ -558,6 +558,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: eventWithStats.name,
         location: eventWithStats.location,
         datetime: eventWithStats.datetime,
+        description: eventWithStats.description || undefined,
+        shareCode: eventWithStats.shareCode || undefined,
         monowheelCount: eventWithStats.monowheelCount,
         scooterCount: eventWithStats.scooterCount,
         spectatorCount: eventWithStats.spectatorCount,
