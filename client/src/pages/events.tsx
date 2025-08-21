@@ -264,28 +264,28 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             <div className="flex items-center">
-              <div className="stats-card-purple p-3 rounded-lg">
-                <i className="fab fa-telegram-plane text-xl" />
+              <div className="stats-card-purple p-2 md:p-3 rounded-lg">
+                <i className="fab fa-telegram-plane text-sm md:text-xl" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Подключенных ботов</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBots}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-xs md:text-sm text-gray-600">Подключенных ботов</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{totalBots}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-3 md:p-6">
             <div className="flex items-center">
-              <div className="stats-card-orange p-3 rounded-lg">
-                <i className="fas fa-chart-line text-xl" />
+              <div className="stats-card-orange p-2 md:p-3 rounded-lg">
+                <i className="fas fa-chart-line text-sm md:text-xl" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Регистраций сегодня</p>
-                <p className="text-2xl font-bold text-gray-900">{todayRegistrations}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-xs md:text-sm text-gray-600">Регистраций сегодня</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{todayRegistrations}</p>
               </div>
             </div>
           </CardContent>
