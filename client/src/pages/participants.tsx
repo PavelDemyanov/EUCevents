@@ -179,6 +179,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     switch (type) {
       case 'monowheel': return 'Моноколесо';
       case 'scooter': return 'Самокат';
+      case 'eboard': return 'Электро-борд';
       case 'spectator': return 'Зритель';
       default: return type;
     }
@@ -188,6 +189,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     switch (type) {
       case 'monowheel': return '🛞';
       case 'scooter': return '🛴';
+      case 'eboard': return '🏄';
       case 'spectator': return '👀';
       default: return '';
     }
@@ -218,6 +220,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
   const activeParticipants = typedParticipants.filter(p => p.isActive);
   const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
   const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+  const eboardCount = activeParticipants.filter(p => p.transportType === 'eboard').length;
   const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
 
   const columns = [
@@ -402,7 +405,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       {/* Statistics */}
       <Card>
         <CardContent className="p-4 md:p-6 bg-gray-50">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
             <div className="text-center">
               <div className="text-lg md:text-2xl font-bold text-purple-600">{monowheelCount}</div>
               <div className="text-xs md:text-sm text-gray-600">Моноколёса</div>
@@ -410,6 +413,10 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
             <div className="text-center">
               <div className="text-lg md:text-2xl font-bold text-blue-600">{scooterCount}</div>
               <div className="text-xs md:text-sm text-gray-600">Самокаты</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg md:text-2xl font-bold text-orange-600">{eboardCount}</div>
+              <div className="text-xs md:text-sm text-gray-600">Электро-борд</div>
             </div>
             <div className="text-center">
               <div className="text-lg md:text-2xl font-bold text-green-600">{spectatorCount}</div>

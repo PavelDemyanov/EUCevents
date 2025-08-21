@@ -8,12 +8,12 @@ interface UserRegistrationState {
   eventId?: number;
   fullName?: string;
   phone?: string;
-  transportType?: 'monowheel' | 'scooter' | 'spectator';
+  transportType?: 'monowheel' | 'scooter' | 'eboard' | 'spectator';
   telegramNickname?: string;
   existingData?: {
     fullName: string;
     phone: string;
-    transportType?: 'monowheel' | 'scooter' | 'spectator';
+    transportType?: 'monowheel' | 'scooter' | 'eboard' | 'spectator';
     transportModel?: string;
   };
 }
@@ -123,6 +123,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const activeParticipants = participants.filter(p => p.isActive);
         const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
         const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+        const eboardCount = activeParticipants.filter(p => p.transportType === 'eboard').length;
         const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
         const totalCount = activeParticipants.length;
 
@@ -135,6 +136,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   `📊 СТАТИСТИКА УЧАСТНИКОВ:\n` +
                   `🛞 Моноколесо: ${monowheelCount} чел.\n` +
                   `🛴 Самокат: ${scooterCount} чел.\n` +
+                  `🏄 Электро-борд: ${eboardCount} чел.\n` +
                   `👀 Зрители: ${spectatorCount} чел.\n` +
                   `📋 Всего: ${totalCount} чел.\n\n` +
                   `➖➖➖➖➖➖➖➖➖➖\n\n`;
@@ -585,6 +587,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               inline_keyboard: [
                 [{ text: "🛴 Моноколесо", callback_data: "transport_monowheel" }],
                 [{ text: "🛵 Самокат", callback_data: "transport_scooter" }],
+                [{ text: "🏄 Электро-борд", callback_data: "transport_eboard" }],
                 [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
               ],
             },
@@ -668,6 +671,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   [
                     { text: "🛴 Моноколесо", callback_data: "transport_monowheel" },
                     { text: "🛵 Самокат", callback_data: "transport_scooter" }
+                  ],
+                  [
+                    { text: "🏄 Электро-борд", callback_data: "transport_eboard" }
                   ],
                   [
                     { text: "👁️ Зритель", callback_data: "transport_spectator" }
@@ -995,7 +1001,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       }
 
       if (data.startsWith('transport_')) {
-        const transportType = data.replace('transport_', '') as 'monowheel' | 'scooter' | 'spectator';
+        const transportType = data.replace('transport_', '') as 'monowheel' | 'scooter' | 'eboard' | 'spectator';
         const state = userStates.get(telegramId);
         
         console.log(`Transport selection: ${transportType}, user state:`, state);
@@ -1011,8 +1017,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId && u.isActive);
           
           if (existingUserForEvent) {
-            // For scooter and monowheel, ask for model before updating
-            if (transportType === 'scooter' || transportType === 'monowheel') {
+            // For scooter, monowheel and eboard, ask for model before updating
+            if (transportType === 'scooter' || transportType === 'monowheel' || transportType === 'eboard') {
               userStates.set(telegramId, {
                 ...state,
                 step: 'edit_transport_model',
@@ -1048,8 +1054,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const existingUserForEvent = existingUsers.find(u => u.eventId === state.eventId);
           
           if (existingUserForEvent && existingUserForEvent.isActive) {
-            // For scooter and monowheel, ask for model before updating
-            if (transportType === 'scooter' || transportType === 'monowheel') {
+            // For scooter, monowheel and eboard, ask for model before updating
+            if (transportType === 'scooter' || transportType === 'monowheel' || transportType === 'eboard') {
               userStates.set(telegramId, {
                 ...state,
                 step: 'transport_model',
@@ -1080,7 +1086,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
 
         // For new registration, check if we need model
-        if (transportType === 'scooter' || transportType === 'monowheel') {
+        if (transportType === 'scooter' || transportType === 'monowheel' || transportType === 'eboard') {
           userStates.set(telegramId, {
             ...state,
             step: 'transport_model',
@@ -1666,6 +1672,7 @@ function getTransportTypeLabel(type: string): string {
   switch (type) {
     case 'monowheel': return 'Моноколесо';
     case 'scooter': return 'Самокат';
+    case 'eboard': return 'Электро-борд';
     case 'spectator': return 'Зритель';
     default: return type;
   }

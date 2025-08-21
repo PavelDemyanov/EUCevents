@@ -143,6 +143,10 @@
   @apply bg-blue-100 text-blue-800;
 }
 
+.participant-number-eboard {
+  @apply bg-orange-100 text-orange-800;
+}
+
 .participant-number-spectator {
   @apply bg-green-100 text-green-800;
 }

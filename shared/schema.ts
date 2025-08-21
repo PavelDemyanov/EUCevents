@@ -153,8 +153,8 @@ export const fixedNumberBindingsRelations = relations(fixedNumberBindings, ({ })
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
   phone: z.string().regex(/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/, "Неверный формат телефона. Используйте: +7 (XXX) XXX-XX-XX"),
-  transportType: z.enum(["monowheel", "scooter", "spectator"], {
-    errorMap: () => ({ message: "Выберите тип транспорта: моноколесо, самокат или зритель" })
+  transportType: z.enum(["monowheel", "scooter", "eboard", "spectator"], {
+    errorMap: () => ({ message: "Выберите тип транспорта: моноколесо, самокат, электро-борд или зритель" })
   }),
   fullName: z.string().min(2, "ФИО должно содержать минимум 2 символа"),
 }).omit({

@@ -126,6 +126,7 @@ export default function PublicEvent() {
   const groupedParticipants = {
     monowheel: activeParticipants.filter((p) => p.transportType === 'monowheel'),
     scooter: activeParticipants.filter((p) => p.transportType === 'scooter'),
+    eboard: activeParticipants.filter((p) => p.transportType === 'eboard'),
     spectator: activeParticipants.filter((p) => p.transportType === 'spectator')
   };
 
@@ -133,6 +134,7 @@ export default function PublicEvent() {
     switch (type) {
       case 'monowheel': return 'Моноколесо';
       case 'scooter': return 'Самокат';
+      case 'eboard': return 'Электро-борд';
       case 'spectator': return 'Зритель';
       default: return type;
     }
@@ -142,6 +144,7 @@ export default function PublicEvent() {
     switch (type) {
       case 'monowheel': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'scooter': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'eboard': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
       case 'spectator': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
       default: return 'bg-gray-100 text-gray-800';
     }

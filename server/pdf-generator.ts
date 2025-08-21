@@ -138,9 +138,9 @@ export async function generateParticipantsPDF(
 
       // Table rows
       let currentY = tableTop + 30;
-      const activeParticipants = (participants || []).filter(p => p.isActive);
+      const activeParticipants = (participants || []).filter((p: any) => p.isActive);
       
-      activeParticipants.forEach((participant, index) => {
+      activeParticipants.forEach((participant: any, index: number) => {
         // Check if we need a new page (with extra space for multi-line text)
         if (currentY > 650) {
           doc.addPage();
@@ -217,20 +217,23 @@ export async function generateParticipantsPDF(
       doc.fontSize(14)
          .text(summaryText, 50, summaryY);
 
-      const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
-      const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
-      const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+      const monowheelCount = activeParticipants.filter((p: any) => p.transportType === 'monowheel').length;
+      const scooterCount = activeParticipants.filter((p: any) => p.transportType === 'scooter').length;
+      const eboardCount = activeParticipants.filter((p: any) => p.transportType === 'eboard').length;
+      const spectatorCount = activeParticipants.filter((p: any) => p.transportType === 'spectator').length;
       const totalCount = activeParticipants.length;
 
       const monowheelText = Buffer.from(`Моноколеса: ${monowheelCount}`, 'utf8').toString('utf8');
       const scooterText = Buffer.from(`Самокаты: ${scooterCount}`, 'utf8').toString('utf8');
+      const eboardText = Buffer.from(`Электро-борд: ${eboardCount}`, 'utf8').toString('utf8');
       const spectatorText = Buffer.from(`Зрители: ${spectatorCount}`, 'utf8').toString('utf8');
       const totalText = Buffer.from(`Всего участников: ${totalCount}`, 'utf8').toString('utf8');
 
       doc.fontSize(12)
-         .text(monowheelText, 100, summaryY + 30)
-         .text(scooterText, 250, summaryY + 30)
-         .text(spectatorText, 400, summaryY + 30);
+         .text(monowheelText, 70, summaryY + 30)
+         .text(scooterText, 200, summaryY + 30)
+         .text(eboardText, 320, summaryY + 30)
+         .text(spectatorText, 460, summaryY + 30);
 
       doc.fontSize(14)
          .text(totalText, 50, summaryY + 60, { align: 'center' });
@@ -248,6 +251,7 @@ function getTransportTypeLabel(type: string): string {
   switch (type) {
     case 'monowheel': return Buffer.from('Моноколесо', 'utf8').toString('utf8');
     case 'scooter': return Buffer.from('Самокат', 'utf8').toString('utf8');
+    case 'eboard': return Buffer.from('Электро-борд', 'utf8').toString('utf8');
     case 'spectator': return Buffer.from('Зритель', 'utf8').toString('utf8');
     default: return Buffer.from(type || '', 'utf8').toString('utf8');
   }
