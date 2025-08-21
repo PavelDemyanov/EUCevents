@@ -14,6 +14,7 @@ interface PublicEventData {
     description?: string;
     location: string;
     datetime: string;
+    allowedTransportTypes: string[];
   };
   participants: Array<{
     id: number;
@@ -213,7 +214,7 @@ export default function PublicEvent() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className={`grid gap-4 mb-8 ${event.allowedTransportTypes?.length === 1 ? 'grid-cols-1 md:grid-cols-1' : event.allowedTransportTypes?.length === 2 ? 'grid-cols-1 md:grid-cols-2' : event.allowedTransportTypes?.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-4'}`}>
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-blue-600">
@@ -225,38 +226,57 @@ export default function PublicEvent() {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-blue-600">
-                {groupedParticipants.monowheel.length}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Моноколеса
-              </div>
-            </CardContent>
-          </Card>
+          {event.allowedTransportTypes?.includes('monowheel') && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-purple-600">
+                  {groupedParticipants.monowheel.length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  🛞 Моноколеса
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-green-600">
-                {groupedParticipants.scooter.length}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Самокаты
-              </div>
-            </CardContent>
-          </Card>
+          {event.allowedTransportTypes?.includes('scooter') && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-blue-600">
+                  {groupedParticipants.scooter.length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  🛴 Самокаты
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold text-gray-600">
-                {groupedParticipants.spectator.length}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Зрители
-              </div>
-            </CardContent>
-          </Card>
+          {event.allowedTransportTypes?.includes('eboard') && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-orange-600">
+                  {groupedParticipants.eboard.length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  🏄 Электро-борды
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {event.allowedTransportTypes?.includes('spectator') && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-green-600">
+                  {groupedParticipants.spectator.length}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  👀 Зрители
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Participants List */}
