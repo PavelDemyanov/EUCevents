@@ -405,23 +405,31 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
       {/* Statistics */}
       <Card>
         <CardContent className="p-4 md:p-6 bg-gray-50">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
-            <div className="text-center">
-              <div className="text-lg md:text-2xl font-bold text-purple-600">{monowheelCount}</div>
-              <div className="text-xs md:text-sm text-gray-600">Моноколёса</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg md:text-2xl font-bold text-blue-600">{scooterCount}</div>
-              <div className="text-xs md:text-sm text-gray-600">Самокаты</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg md:text-2xl font-bold text-orange-600">{eboardCount}</div>
-              <div className="text-xs md:text-sm text-gray-600">Электро-борд</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg md:text-2xl font-bold text-green-600">{spectatorCount}</div>
-              <div className="text-xs md:text-sm text-gray-600">Зрители</div>
-            </div>
+          <div className={`grid gap-3 md:gap-4 grid-cols-2 ${(event as any)?.allowedTransportTypes?.length === 1 ? 'md:grid-cols-2' : (event as any)?.allowedTransportTypes?.length === 2 ? 'md:grid-cols-3' : (event as any)?.allowedTransportTypes?.length === 3 ? 'md:grid-cols-4' : 'md:grid-cols-5'}`}>
+            {(event as any)?.allowedTransportTypes?.includes('monowheel') && (
+              <div className="text-center">
+                <div className="text-lg md:text-2xl font-bold text-purple-600">{monowheelCount}</div>
+                <div className="text-xs md:text-sm text-gray-600">🛞 Моноколёса</div>
+              </div>
+            )}
+            {(event as any)?.allowedTransportTypes?.includes('scooter') && (
+              <div className="text-center">
+                <div className="text-lg md:text-2xl font-bold text-blue-600">{scooterCount}</div>
+                <div className="text-xs md:text-sm text-gray-600">🛴 Самокаты</div>
+              </div>
+            )}
+            {(event as any)?.allowedTransportTypes?.includes('eboard') && (
+              <div className="text-center">
+                <div className="text-lg md:text-2xl font-bold text-orange-600">{eboardCount}</div>
+                <div className="text-xs md:text-sm text-gray-600">🏄 Электро-борд</div>
+              </div>
+            )}
+            {(event as any)?.allowedTransportTypes?.includes('spectator') && (
+              <div className="text-center">
+                <div className="text-lg md:text-2xl font-bold text-green-600">{spectatorCount}</div>
+                <div className="text-xs md:text-sm text-gray-600">👀 Зрители</div>
+              </div>
+            )}
             <div className="text-center">
               <div className="text-lg md:text-2xl font-bold text-gray-800">{activeParticipants.length}</div>
               <div className="text-xs md:text-sm text-gray-600">Всего</div>
