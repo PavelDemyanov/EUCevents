@@ -163,6 +163,27 @@
   @apply bg-gray-100 text-gray-500;
 }
 
+/* Mobile modal dialog improvements */
+@media (max-width: 640px) {
+  [data-radix-dialog-content] {
+    margin: 1rem !important;
+    width: calc(100vw - 2rem) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 2rem) !important;
+    position: fixed !important;
+    top: 1rem !important;
+    left: 1rem !important;
+    transform: none !important;
+    overflow-y: auto !important;
+  }
+  
+  [data-radix-dialog-overlay] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+  }
+}
+
 .participant-inactive td {
   @apply text-gray-500;
 }

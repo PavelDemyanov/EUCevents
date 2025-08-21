@@ -445,7 +445,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
       {/* Create Event Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Создать новое мероприятие</DialogTitle>
           </DialogHeader>
@@ -615,7 +615,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
 
       {/* Edit Event Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[625px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Редактировать мероприятие</DialogTitle>
           </DialogHeader>
