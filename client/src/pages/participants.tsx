@@ -150,10 +150,25 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     },
     onSuccess: (data) => {
       const shareUrl = `${window.location.origin}/public/${data.shareCode}`;
-      window.open(shareUrl, '_blank');
+      
+      // Определяем мобильное устройство
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // На мобильных устройствах сразу переходим по ссылке
+        window.location.href = shareUrl;
+      } else {
+        // На десктопе пытаемся открыть в новом окне
+        const newWindow = window.open(shareUrl, '_blank');
+        if (!newWindow) {
+          // Если попап заблокирован, переходим по ссылке
+          window.location.href = shareUrl;
+        }
+      }
+      
       toast({
         title: "Публичная ссылка создана",
-        description: "Страница открыта в новом окне",
+        description: isMobile ? "Переход к публичной странице" : "Страница открыта в новом окне",
       });
     },
     onError: (error: any) => {
