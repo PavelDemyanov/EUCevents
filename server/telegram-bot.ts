@@ -308,7 +308,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
           return bot.sendMessage(
             chatId,
-            `Вы выбрали: "${event.name}"\n\n` +
+            `Вы выбрали: "${event.name}"\n` +
+            (event.description ? `📝 ${event.description}\n\n` : '\n') +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
             `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
@@ -745,11 +746,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             );
 
             if (unregisteredEvents.length > 0) {
-              statusMessage += "📝 Доступны для регистрации:\n";
+              statusMessage += "📝 Доступны для регистрации:\n\n";
               unregisteredEvents.forEach(event => {
-                statusMessage += `• ${event.name} (${formatDateTime(event.datetime)})\n`;
+                statusMessage += `🎯 **${event.name}**\n` +
+                  (event.description ? `📝 ${event.description}\n` : '') +
+                  `📍 ${event.location}\n` +
+                  `🕐 ${formatDateTime(event.datetime)}\n\n`;
               });
-              statusMessage += "\n";
             }
 
             const keyboard: any[] = [];
@@ -788,6 +791,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               return bot.sendMessage(
                 chatId,
                 `🏠 Главное меню\n\n📅 Доступно для регистрации: "${event.name}"\n` +
+                (event.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}\n\n` +
                 `Нажмите кнопку ниже для регистрации:`,
@@ -1056,6 +1060,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const status = isRegistered ? "✅ Вы зарегистрированы" : "📝 Доступно для регистрации";
           
           message += `🎯 **${event.name}**\n` +
+            (event.description ? `📝 ${event.description}\n` : '') +
             `📍 ${event.location}\n` +
             `🕐 ${formatDateTime(event.datetime)}\n` +
             `${status}\n\n`;
