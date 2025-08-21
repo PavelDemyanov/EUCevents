@@ -136,7 +136,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   `📊 СТАТИСТИКА УЧАСТНИКОВ:\n` +
                   `🛞 Моноколесо: ${monowheelCount} чел.\n` +
                   `🛴 Самокат: ${scooterCount} чел.\n` +
-                  `🏄 Электро-борд: ${eboardCount} чел.\n` +
+                  `🛹 Электро-борд: ${eboardCount} чел.\n` +
                   `👀 Зрители: ${spectatorCount} чел.\n` +
                   `📋 Всего: ${totalCount} чел.\n\n` +
                   `➖➖➖➖➖➖➖➖➖➖\n\n`;
@@ -456,7 +456,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               label = 'Самокат';
               break;
             case 'eboard':
-              icon = '🏄';
+              icon = '🛹';
               label = 'Электро-борд';
               break;
             case 'spectator':
@@ -619,7 +619,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               inline_keyboard: [
                 [{ text: "🛴 Моноколесо", callback_data: "transport_monowheel" }],
                 [{ text: "🛵 Самокат", callback_data: "transport_scooter" }],
-                [{ text: "🏄 Электро-борд", callback_data: "transport_eboard" }],
+                [{ text: "🛹 Электро-борд", callback_data: "transport_eboard" }],
                 [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
               ],
             },
@@ -716,7 +716,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 label = 'Самокат';
                 break;
               case 'eboard':
-                icon = '🏄';
+                icon = '🛹';
                 label = 'Электро-борд';
                 break;
               case 'spectator':
@@ -871,7 +871,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               label = 'Самокат';
               break;
             case 'eboard':
-              icon = '🏄';
+              icon = '🛹';
               label = 'Электро-борд';
               break;
             case 'spectator':
@@ -1508,7 +1508,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               label = 'Самокат';
               break;
             case 'eboard':
-              icon = '🏄';
+              icon = '🛹';
               label = 'Электро-борд';
               break;
             case 'spectator':

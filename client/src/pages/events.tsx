@@ -533,7 +533,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 {[
                   { value: "monowheel", label: "🛞 Моноколесо", emoji: "🛞" },
                   { value: "scooter", label: "🛴 Самокат", emoji: "🛴" },
-                  { value: "eboard", label: "🏄 Электро-борд", emoji: "🏄" },
+                  { value: "eboard", label: "🛹 Электро-борд", emoji: "🛹" },
                   { value: "spectator", label: "👀 Зритель", emoji: "👀" }
                 ].map((transport) => (
                   <div key={transport.value} className="flex items-center space-x-2">
@@ -679,7 +679,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                   {[
                     { value: "monowheel", label: "🛞 Моноколесо", emoji: "🛞" },
                     { value: "scooter", label: "🛴 Самокат", emoji: "🛴" },
-                    { value: "eboard", label: "🏄 Электро-борд", emoji: "🏄" },
+                    { value: "eboard", label: "🛹 Электро-борд", emoji: "🛹" },
                     { value: "spectator", label: "👀 Зритель", emoji: "👀" }
                   ].map((transport) => (
                     <div key={transport.value} className="flex items-center space-x-2">

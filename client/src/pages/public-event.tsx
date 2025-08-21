@@ -259,7 +259,7 @@ export default function PublicEvent() {
                   {groupedParticipants.eboard.length}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                  🏄 Электро-борды
+                  🛹 Электро-борды
                 </div>
               </CardContent>
             </Card>

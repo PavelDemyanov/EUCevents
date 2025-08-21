@@ -189,7 +189,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
     switch (type) {
       case 'monowheel': return '🛞';
       case 'scooter': return '🛴';
-      case 'eboard': return '🏄';
+      case 'eboard': return '🛹';
       case 'spectator': return '👀';
       default: return '';
     }
@@ -421,7 +421,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
             {(event as any)?.allowedTransportTypes?.includes('eboard') && (
               <div className="text-center">
                 <div className="text-lg md:text-2xl font-bold text-orange-600">{eboardCount}</div>
-                <div className="text-xs md:text-sm text-gray-600">🏄 Электро-борд</div>
+                <div className="text-xs md:text-sm text-gray-600">🛹 Электро-борд</div>
               </div>
             )}
             {(event as any)?.allowedTransportTypes?.includes('spectator') && (
@@ -455,7 +455,7 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
                   const labels: Record<string, string> = {
                     monowheel: '🛞 Моноколесо',
                     scooter: '🛴 Самокат',
-                    eboard: '🏄 Электро-борд',
+                    eboard: '🛹 Электро-борд',
                     spectator: '👀 Зритель'
                   };
                   return { value: type, label: labels[type] || type };

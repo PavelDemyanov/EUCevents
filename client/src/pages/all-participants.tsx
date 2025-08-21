@@ -72,7 +72,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
     switch (type) {
       case 'monowheel': return '🛞 Моноколесо';
       case 'scooter': return '🛴 Самокат';
-      case 'eboard': return '🏄 Электро-борд';
+      case 'eboard': return '🛹 Электро-борд';
       case 'spectator': return '👀 Зритель';
       default: return type;
     }
