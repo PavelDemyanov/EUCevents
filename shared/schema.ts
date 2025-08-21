@@ -55,6 +55,7 @@ export const chats = pgTable("chats", {
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  description: varchar("description", { length: 900 }),
   location: text("location").notNull(),
   datetime: timestamp("datetime").notNull(),
   shareCode: varchar("share_code", { length: 50 }).unique(),
@@ -165,6 +166,7 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const insertEventSchema = createInsertSchema(events, {
   name: z.string().min(2, "Название мероприятия обязательно"),
+  description: z.string().max(900, "Описание не должно превышать 900 символов").optional(),
   location: z.string().min(2, "Место проведения обязательно"),
   datetime: z.string().transform((str) => new Date(str)),
 }).omit({

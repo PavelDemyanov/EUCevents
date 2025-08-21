@@ -118,6 +118,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             : getTransportTypeLabel(registration.transportType);
           
           statusMessage += `🎯 **${event?.name}**\n` +
+            (event?.description ? `📝 ${event.description}\n` : '') +
             `📍 ${event?.location}\n` +
             `🕐 ${formatDateTime(event?.datetime!)}\n` +
             `🚗 Транспорт: ${transportInfo}\n` +
@@ -199,6 +200,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
             `📅 ${activeEvents[0].name}\n` +
+            (activeEvents[0].description ? `📝 ${activeEvents[0].description}\n` : '') +
             `📍 ${activeEvents[0].location}\n` +
             `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
@@ -230,6 +232,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           chatId,
           `Добро пожаловать на регистрацию мероприятия!\n\n` +
           `📅 ${activeEvents[0].name}\n` +
+          (activeEvents[0].description ? `📝 ${activeEvents[0].description}\n` : '') +
           `📍 ${activeEvents[0].location}\n` +
           `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
           `Для регистрации мне потребуется несколько данных.\n` +
@@ -333,8 +336,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         return bot.sendMessage(
           chatId,
-          `Вы выбрали: "${event.name}"\n\n` +
-          `Пожалуйста, введите ваши ФИО:`
+          `Вы выбрали: "${event.name}"\n` +
+          (event.description ? `📝 ${event.description}\n` : '') +
+          `\nПожалуйста, введите ваши ФИО:`
         );
       }
 
@@ -728,6 +732,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 : getTransportTypeLabel(registration.transportType);
               
               statusMessage += `🎯 **${event?.name}**\n` +
+                (event?.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event?.location}\n` +
                 `🕐 ${formatDateTime(event?.datetime!)}\n` +
                 `🚗 Транспорт: ${transportInfo}\n` +
@@ -1399,6 +1404,7 @@ export async function sendEventNotificationToGroup(
 ) {
   const message = `🏁 УВЕДОМЛЕНИЕ О МЕРОПРИЯТИИ\n\n` +
     `📅 ${eventData.name}\n` +
+    (eventData.description ? `📝 ${eventData.description}\n` : '') +
     `📍 ${eventData.location}\n` +
     `🕐 ${formatDateTime(eventData.datetime)}\n\n` +
     `📊 ТЕКУЩАЯ СТАТИСТИКА УЧАСТНИКОВ:\n` +

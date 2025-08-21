@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,20 +12,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2 } from "lucide-react";
-import type { EventWithStats } from "@shared/schema";
+import type { EventWithStats, Event } from "@shared/schema";
 
 interface EventsProps {
   onViewParticipants?: (eventId: number, eventName?: string) => void;
 }
+
+// Editing type with chatIds for easier form handling
+type EditingEvent = Event & {
+  chatIds?: number[];
+};
 
 export default function Events({ onViewParticipants }: EventsProps = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<EventWithStats | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
   const [newEvent, setNewEvent] = useState({
     name: "",
+    description: "",
     location: "",
     datetime: "",
     chatIds: [] as number[]
@@ -64,7 +71,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowCreateDialog(false);
-      setNewEvent({ name: "", location: "", datetime: "", chatIds: [] });
+      setNewEvent({ name: "", description: "", location: "", datetime: "", chatIds: [] });
       setIsCustomLocation(false);
       toast({
         title: "Успешно",
@@ -173,6 +180,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       eventId: editingEvent.id,
       eventData: {
         name: editingEvent.name,
+        description: editingEvent.description,
         location: editingEvent.location,
         datetime: editingEvent.datetime,
         chatIds: editingEvent.chatIds || [],
@@ -345,9 +353,14 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredEvents.map((event) => (
                   <tr key={event.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="font-medium text-gray-900">{event.name}</div>
-                      <div className="text-sm text-gray-500">ID: #{event.id}</div>
+                      {event.description && (
+                        <div className="text-sm text-gray-600 mt-1 max-w-xs truncate" title={event.description}>
+                          {event.description}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500 mt-1">ID: #{event.id}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center gap-1">
@@ -436,9 +449,25 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
               />
             </div>
             <div>
+              <Label htmlFor="description">Описание мероприятия</Label>
+              <Textarea
+                id="description"
+                value={newEvent.description}
+                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                placeholder="Введите описание мероприятия (не более 900 символов)"
+                maxLength={900}
+                rows={3}
+                className="resize-none"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Необязательное поле</span>
+                <span>{newEvent.description.length}/900</span>
+              </div>
+            </div>
+            <div>
               <Label htmlFor="location">Место проведения</Label>
               <div className="space-y-2">
-                {locations.length > 0 && (
+                {(locations as string[]).length > 0 && (
                   <Select 
                     value={isCustomLocation ? "" : newEvent.location} 
                     onValueChange={(value) => {
@@ -455,7 +484,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                       <SelectValue placeholder="Выберите место или введите новое" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations.map((location: string) => (
+                      {(locations as string[]).map((location: string) => (
                         <SelectItem key={location} value={location}>
                           {location}
                         </SelectItem>
@@ -464,7 +493,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                     </SelectContent>
                   </Select>
                 )}
-                {(isCustomLocation || locations.length === 0) && (
+                {(isCustomLocation || (locations as string[]).length === 0) && (
                   <Input
                     id="location"
                     value={newEvent.location}
@@ -488,10 +517,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
             <div>
               <Label>Telegram-чаты</Label>
               <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
-                {chats.length === 0 ? (
+                {(chats as any[]).length === 0 ? (
                   <p className="text-gray-500 text-sm">Нет доступных чатов</p>
                 ) : (
-                  chats.map((chat: any) => (
+                  (chats as any[]).map((chat: any) => (
                     <div key={chat.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`chat-${chat.id}`}
@@ -553,6 +582,22 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 />
               </div>
               <div>
+                <Label htmlFor="edit-description">Описание мероприятия</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editingEvent.description || ""}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                  placeholder="Введите описание мероприятия (не более 900 символов)"
+                  maxLength={900}
+                  rows={3}
+                  className="resize-none"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Необязательное поле</span>
+                  <span>{(editingEvent.description || "").length}/900</span>
+                </div>
+              </div>
+              <div>
                 <Label htmlFor="edit-location">Место проведения</Label>
                 <Input
                   id="edit-location"
@@ -573,17 +618,17 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                       ? new Date(editingEvent.datetime).toISOString().slice(0, 16)
                       : ''
                   }
-                  onChange={(e) => setEditingEvent({ ...editingEvent, datetime: e.target.value })}
+                  onChange={(e) => setEditingEvent({ ...editingEvent, datetime: new Date(e.target.value) })}
                   required
                 />
               </div>
               <div>
                 <Label>Telegram-чаты</Label>
                 <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
-                  {chats.length === 0 ? (
+                  {(chats as any[]).length === 0 ? (
                     <p className="text-gray-500 text-sm">Нет доступных чатов</p>
                   ) : (
-                    chats.map((chat: any) => (
+                    (chats as any[]).map((chat: any) => (
                       <div key={chat.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`edit-chat-${chat.id}`}
