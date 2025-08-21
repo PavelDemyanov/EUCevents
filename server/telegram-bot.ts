@@ -20,11 +20,35 @@ interface UserRegistrationState {
 
 const userStates = new Map<string, UserRegistrationState>();
 
+// Global bot instance to prevent multiple polling
+let activeBotInstance: TelegramBot | null = null;
+
 export async function startTelegramBot(token: string, storage: IStorage) {
-  console.log('Starting Telegram bot...');
+  // Stop existing bot if running
+  if (activeBotInstance) {
+    console.log('Stopping existing bot instance...');
+    try {
+      await activeBotInstance.stopPolling();
+      activeBotInstance = null;
+    } catch (error) {
+      console.log('Error stopping existing bot:', error);
+    }
+  }
+
+  console.log('Starting new Telegram bot...');
+  
+  // First, try to clear any webhook that might be set
+  try {
+    const webhookBot = new TelegramBot(token);
+    await webhookBot.deleteWebHook();
+    console.log('Webhook cleared successfully');
+  } catch (error) {
+    console.log('Failed to clear webhook:', error);
+  }
+
   const bot = new TelegramBot(token, { 
     polling: { 
-      autoStart: true,
+      autoStart: false, // Start manually to avoid conflicts
       params: {
         timeout: 10,
         limit: 100,
@@ -36,9 +60,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
   bot.on('polling_error', (error) => {
     console.log('Polling error:', error.message);
     if (error.message.includes('Conflict')) {
-      console.log('Bot polling conflict detected - another instance may be running');
+      console.log('Bot polling conflict detected - another instance is running. This is expected during development.');
+      // Don't automatically restart to avoid infinite loops
     }
   });
+
+  // Set as active instance
+  activeBotInstance = bot;
 
   // Handle /start command
   bot.onText(/\/start/, async (msg) => {
@@ -1281,7 +1309,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     }
   });
 
-  console.log(`Telegram bot started with token: ${token.substring(0, 10)}...`);
+  // Start polling manually
+  try {
+    await bot.startPolling();
+    console.log(`Telegram bot started successfully with token: ${token.substring(0, 10)}...`);
+  } catch (error) {
+    console.error('Failed to start bot polling:', error);
+  }
 
   // Export bot instance for external use
   return bot;

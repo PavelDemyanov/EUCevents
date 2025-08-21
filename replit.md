@@ -49,15 +49,24 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 - **Build Tools**: Vite for frontend bundling, esbuild for server bundling
 - **Validation**: Zod for runtime type validation and schema definition
 
-### Recent Updates (August 20, 2025)
+### Recent Updates (August 21, 2025)
 
-- **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
-- **Public Pages**: Created public event view without phone numbers and admin functions
-- **Database Schema**: Added shareCode field to events table for public sharing
-- **Share Button**: Added "Поделиться" button on participants page that opens public link in new window
-- **Mobile UI Improvements**: Comprehensive mobile responsiveness across all pages with reduced sidebar width, responsive grid layouts, mobile headers
-- **Admin Management System**: Added full admin user management with login/password creation, role-based access control, and admin dashboard in settings
-- **Enhanced Database Schema**: Extended adminUsers table with fullName, email, isActive, isSuperAdmin fields for comprehensive user management
-- **Deployment Setup Wizard**: Created first-run setup wizard for initial administrator creation and bot configuration
-- **Production Ready**: Added comprehensive README with installation instructions and production deployment guide
-- **Local Server Support**: Full local server installation with PostgreSQL setup and system service configuration
+- **Bot UX Improvements (In Progress)**: Enhanced Telegram bot user experience
+  - Added "🏠 Домой" button after registration/editing completion for easy navigation
+  - Implemented arbitrary message handling - bot now responds to any message (like "привет", "алло") with current events list
+  - Fixed TypeScript compilation errors in telegram-bot.ts
+  - Improved bot polling conflict management to prevent multiple bot instances
+  - Added webhook clearing on bot startup to resolve polling conflicts
+  - Enhanced error handling and logging for bot message processing
+
+- **Previous Updates (August 20, 2025)**:
+  - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
+  - **Public Pages**: Created public event view without phone numbers and admin functions
+  - **Database Schema**: Added shareCode field to events table for public sharing
+  - **Share Button**: Added "Поделиться" button on participants page that opens public link in new window
+  - **Mobile UI Improvements**: Comprehensive mobile responsiveness across all pages with reduced sidebar width, responsive grid layouts, mobile headers
+  - **Admin Management System**: Added full admin user management with login/password creation, role-based access control, and admin dashboard in settings
+  - **Enhanced Database Schema**: Extended adminUsers table with fullName, email, isActive, isSuperAdmin fields for comprehensive user management
+  - **Deployment Setup Wizard**: Created first-run setup wizard for initial administrator creation and bot configuration
+  - **Production Ready**: Added comprehensive README with installation instructions and production deployment guide
+  - **Local Server Support**: Full local server installation with PostgreSQL setup and system service configuration

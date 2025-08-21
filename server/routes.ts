@@ -6,7 +6,6 @@ import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertF
 import { setupManager } from "./setup";
 // Import Telegram bot and PDF generator only if files exist
 let startTelegramBot: any = null;
-let currentBot: any = null;
 let generateParticipantsPDF: any = null;
 
 // Load modules asynchronously
@@ -100,17 +99,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (startTelegramBot) {
     try {
       const bots = await storage.getBots();
-      for (const bot of bots.filter(b => b.isActive)) {
-        console.log(`Starting initial bot for: ${bot.username}`);
-        if (currentBot) {
-          console.log('Stopping existing bot to prevent conflicts...');
-          try {
-            await currentBot.stopPolling();
-          } catch (error) {
-            console.log('Error stopping existing bot:', error);
-          }
-        }
-        currentBot = await startTelegramBot(bot.token, storage);
+      const activeBot = bots.find(b => b.isActive);
+      if (activeBot) {
+        console.log(`Starting initial bot for: ${activeBot.username}`);
+        await startTelegramBot(activeBot.token, storage);
       }
     } catch (error) {
       console.error("Ошибка запуска Telegram ботов:", error);
@@ -305,15 +297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (startTelegramBot) {
         console.log(`Starting bot for: ${bot.username}`);
-        if (currentBot) {
-          console.log('Stopping existing bot to prevent conflicts...');
-          try {
-            await currentBot.stopPolling();
-          } catch (error) {
-            console.log('Error stopping existing bot:', error);
-          }
-        }
-        currentBot = await startTelegramBot(bot.token, storage);
+        await startTelegramBot(bot.token, storage);
       }
       
       await storage.activateBot(botId);
@@ -773,15 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Start the bot (if module is available)
       if (bot.isActive && startTelegramBot) {
         console.log(`Starting bot for: ${bot.username}`);
-        if (currentBot) {
-          console.log('Stopping existing bot to prevent conflicts...');
-          try {
-            await currentBot.stopPolling();
-          } catch (error) {
-            console.log('Error stopping existing bot:', error);
-          }
-        }
-        currentBot = await startTelegramBot(bot.token, storage);
+        await startTelegramBot(bot.token, storage);
       }
       
       res.json(bot);
