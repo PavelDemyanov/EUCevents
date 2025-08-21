@@ -124,6 +124,10 @@
   @apply px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full;
 }
 
+.transport-badge-eboard {
+  @apply px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full;
+}
+
 .transport-badge-spectator {
   @apply px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full;
 }
@@ -144,7 +148,7 @@
 }
 
 .participant-number-eboard {
-  @apply bg-orange-100 text-orange-800;
+  @apply bg-purple-100 text-purple-800;
 }
 
 .participant-number-spectator {
@@ -176,5 +180,5 @@
 }
 
 .stats-card-orange {
-  @apply bg-orange-100 text-orange-600;
+  @apply bg-purple-100 text-purple-600;
 }
