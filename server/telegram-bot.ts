@@ -697,7 +697,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
       }
 
-      if (data === 'back_to_main' || data === 'go_home') {
+      if (data === 'back_to_main' || data === 'go_home' || data === 'refresh_events') {
         // Navigate back to main menu (equivalent to /start)
         userStates.delete(telegramId);
         
@@ -1026,8 +1026,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (activeEvents.length === 0) {
           return bot.sendMessage(
             chatId,
-            "👋 Привет! В данный момент нет активных мероприятий для регистрации.\n\n" +
-            "Используйте команду /start чтобы проверить наличие новых мероприятий."
+            "👋 Привет! В данный момент нет активных мероприятий для регистрации.",
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🔄 Обновить список", callback_data: "refresh_events" }
+                ]]
+              }
+            }
           );
         }
 
@@ -1056,7 +1062,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
 
         if (unregisteredEvents.length > 0) {
-          message += "🚀 Для регистрации используйте команду /start";
+          message += "🚀 Выберите мероприятие для регистрации:";
           
           const keyboard = [[
             { text: "🚀 Начать регистрацию", callback_data: "go_home" }
@@ -1067,10 +1073,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             parse_mode: 'Markdown'
           });
         } else {
-          message += "✅ Вы зарегистрированы на все доступные мероприятия!\n\n" +
-            "Используйте /start для управления своими регистрациями.";
+          message += "✅ Вы зарегистрированы на все доступные мероприятия!";
+          
+          const keyboard = [[
+            { text: "⚙️ Управление регистрациями", callback_data: "go_home" }
+          ]];
           
           return bot.sendMessage(chatId, message, {
+            reply_markup: { inline_keyboard: keyboard },
             parse_mode: 'Markdown'
           });
         }
