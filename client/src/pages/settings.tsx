@@ -403,38 +403,47 @@ export default function Settings() {
           ) : (
             <div className="space-y-4">
               {(bots as Bot[]).map((bot: Bot) => (
-                <div key={bot.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-100 p-2 rounded-lg">
+                <div key={bot.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border rounded-lg gap-3 md:gap-0">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
                       <BotIcon className="h-5 w-5 text-blue-600" />
                     </div>
-                    <div>
-                      <h3 className="font-medium">{bot.name}</h3>
-                      <p className="text-sm text-gray-600">Telegram бот для уведомлений</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-sm md:text-base truncate">{bot.name}</h3>
+                      <p className="text-xs md:text-sm text-gray-600">Telegram бот для уведомлений</p>
+                      <p className="text-xs text-gray-500 mt-1 truncate">
                         Токен: {bot.token.substring(0, 10)}...
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={bot.isActive ? "default" : "secondary"}>
+                  <div className="flex items-center justify-between md:justify-end space-x-2 flex-shrink-0">
+                    <Badge variant={bot.isActive ? "default" : "secondary"} className="text-xs">
                       {bot.isActive ? "Активен" : "Отключен"}
                     </Badge>
-                    <Button
-                      variant={bot.isActive ? "destructive" : "default"}
-                      size="sm"
-                      onClick={() => handleToggleBot(bot.id, bot.isActive)}
-                      disabled={toggleBotMutation.isPending}
-                    >
-                      {bot.isActive ? "Остановить" : "Запустить"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteBot(bot.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center space-x-1 md:space-x-2">
+                      <Button
+                        variant={bot.isActive ? "destructive" : "default"}
+                        size="sm"
+                        onClick={() => handleToggleBot(bot.id, bot.isActive)}
+                        disabled={toggleBotMutation.isPending}
+                        className="text-xs px-2 md:px-3"
+                      >
+                        <span className="hidden md:inline">
+                          {bot.isActive ? "Остановить" : "Запустить"}
+                        </span>
+                        <span className="md:hidden">
+                          {bot.isActive ? "Стоп" : "Старт"}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteBot(bot.id)}
+                        className="px-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -471,27 +480,28 @@ export default function Settings() {
           ) : (
             <div className="space-y-4">
               {(chats as Chat[]).map((chat: Chat) => (
-                <div key={chat.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-green-100 p-2 rounded-lg">
+                <div key={chat.id} className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border rounded-lg gap-3 md:gap-0">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="bg-green-100 p-2 rounded-lg flex-shrink-0">
                       <MessageCircle className="h-5 w-5 text-green-600" />
                     </div>
-                    <div>
-                      <h3 className="font-medium">{chat.title}</h3>
-                      <p className="text-sm text-gray-600">Chat ID: {chat.chatId}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-sm md:text-base truncate">{chat.title}</h3>
+                      <p className="text-xs md:text-sm text-gray-600 truncate">Chat ID: {chat.chatId}</p>
+                      <p className="text-xs text-gray-500 mt-1 truncate">
                         Бот: {(bots as Bot[]).find((bot: Bot) => bot.id === chat.botId)?.name || 'Неизвестен'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={chat.isActive ? "default" : "secondary"}>
+                  <div className="flex items-center justify-between md:justify-end space-x-2 flex-shrink-0">
+                    <Badge variant={chat.isActive ? "default" : "secondary"} className="text-xs">
                       {chat.isActive ? "Активен" : "Отключен"}
                     </Badge>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteChat(chat.id)}
+                      className="px-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -628,20 +638,26 @@ export default function Settings() {
 
       {/* Fixed Number Bindings Section */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Hash className="h-5 w-5" />
-              Привязка номеров
-            </CardTitle>
-            <p className="text-sm text-gray-600">
-              Фиксированные привязки telegram-ников к номерам участников
-            </p>
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Hash className="h-5 w-5" />
+                Привязка номеров
+              </CardTitle>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">
+                Фиксированные привязки telegram-ников к номерам участников
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowBindingDialog(true)}
+              className="gap-2 w-full md:w-auto text-xs md:text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden md:inline">Добавить привязку</span>
+              <span className="md:hidden">Привязка</span>
+            </Button>
           </div>
-          <Button onClick={() => setShowBindingDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить привязку
-          </Button>
         </CardHeader>
         <CardContent>
           {bindingsLoading ? (
@@ -653,18 +669,18 @@ export default function Settings() {
           ) : (
             <div className="space-y-2">
               {(fixedBindings as FixedNumberBinding[]).map((binding: FixedNumberBinding) => (
-                <div key={binding.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Badge variant="outline" className="font-mono">
+                <div key={binding.id} className="flex items-center justify-between p-2 md:p-3 border rounded-lg">
+                  <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
+                    <Badge variant="outline" className="font-mono text-xs flex-shrink-0">
                       #{binding.participantNumber}
                     </Badge>
-                    <span className="text-gray-700">@{binding.telegramNickname}</span>
+                    <span className="text-sm md:text-base text-gray-700 truncate">@{binding.telegramNickname}</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteBinding(binding.id)}
-                    className="text-red-600 hover:text-red-800"
+                    className="text-red-600 hover:text-red-800 px-2 flex-shrink-0"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -806,21 +822,22 @@ export default function Settings() {
 
       {/* Администраторы */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5" />
-              <CardTitle>Администраторы</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Администраторы</CardTitle>
             </div>
             <Button 
               onClick={() => {
                 setEditingAdmin(null);
                 setShowAdminDialog(true);
               }}
-              size="sm"
+              className="gap-2 w-full md:w-auto text-xs md:text-sm"
             >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Добавить администратора
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden md:inline">Добавить администратора</span>
+              <span className="md:hidden">Админ</span>
             </Button>
           </div>
         </CardHeader>
@@ -832,29 +849,29 @@ export default function Settings() {
               {(admins as AdminUser[]).map((admin: AdminUser) => (
                 <div
                   key={admin.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
+                  className="flex flex-col md:flex-row md:items-center justify-between p-2 md:p-3 border rounded-lg bg-gray-50 gap-3 md:gap-0"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">@{admin.username}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-medium text-sm md:text-base truncate">@{admin.username}</span>
                       {admin.isSuperAdmin && (
-                        <Badge variant="secondary">Супер-админ</Badge>
+                        <Badge variant="secondary" className="text-xs">Супер-админ</Badge>
                       )}
                       {!admin.isActive && (
-                        <Badge variant="destructive">Отключен</Badge>
+                        <Badge variant="destructive" className="text-xs">Отключен</Badge>
                       )}
                     </div>
                     {admin.fullName && (
-                      <p className="text-sm text-gray-500">{admin.fullName}</p>
+                      <p className="text-xs md:text-sm text-gray-500 truncate">{admin.fullName}</p>
                     )}
                     {admin.email && (
-                      <p className="text-xs text-gray-400">{admin.email}</p>
+                      <p className="text-xs text-gray-400 truncate">{admin.email}</p>
                     )}
                     <p className="text-xs text-gray-400">
                       Создан: {new Date(admin.createdAt!).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-end space-x-1 md:space-x-2 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -862,6 +879,7 @@ export default function Settings() {
                         setEditingAdmin(admin);
                         setShowAdminDialog(true);
                       }}
+                      className="px-2"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -871,6 +889,7 @@ export default function Settings() {
                       onClick={() => handleDeleteAdmin(admin.id)}
                       disabled={admin.isSuperAdmin}
                       title={admin.isSuperAdmin ? "Нельзя удалить супер-администратора" : "Удалить администратора"}
+                      className="px-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
