@@ -75,6 +75,84 @@ export async function startTelegramBot(token: string, storage: IStorage) {
   // Set as active instance
   activeBotInstance = bot;
 
+  // Handle /event command for group chats
+  bot.onText(/\/event/, async (msg) => {
+    const chatId = msg.chat.id.toString();
+    const telegramId = msg.from?.id.toString();
+
+    if (!telegramId) {
+      return bot.sendMessage(chatId, "Ошибка получения данных пользователя.");
+    }
+
+    // Only handle /event command in group chats
+    if (msg.chat.type === 'private') {
+      return bot.sendMessage(
+        chatId,
+        "Используйте команду /start для работы с ботом в личных сообщениях."
+      );
+    }
+
+    try {
+      // Get bot info to create link
+      const botInfo = await bot.getMe();
+      const botUsername = botInfo.username;
+
+      // Get events for this specific chat
+      const chatRecord = await storage.getChatByChatId(chatId);
+      if (!chatRecord) {
+        return bot.sendMessage(
+          chatId,
+          "❌ Этот чат не привязан ни к одному мероприятию."
+        );
+      }
+
+      // Get active events for this chat
+      const activeEvents = await storage.getActiveEventsByChatId(chatRecord.id);
+      if (activeEvents.length === 0) {
+        return bot.sendMessage(
+          chatId,
+          "❌ В данный момент нет активных мероприятий для этого чата."
+        );
+      }
+
+      let message = `📅 АКТИВНЫЕ МЕРОПРИЯТИЯ\n\n`;
+
+      for (const event of activeEvents) {
+        // Get transport statistics for this event
+        const participants = await storage.getUsersByEventId(event.id);
+        const activeParticipants = participants.filter(p => p.isActive);
+        const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
+        const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+        const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+        const totalCount = activeParticipants.length;
+
+        message += `🎯 **${event.name}**\n`;
+        if (event.description) {
+          message += `📝 ${event.description}\n`;
+        }
+        message += `📍 ${event.location}\n` +
+                  `🕐 ${formatDateTime(event.datetime)}\n\n` +
+                  `📊 СТАТИСТИКА УЧАСТНИКОВ:\n` +
+                  `🛞 Моноколесо: ${monowheelCount} чел.\n` +
+                  `🛴 Самокат: ${scooterCount} чел.\n` +
+                  `👀 Зрители: ${spectatorCount} чел.\n` +
+                  `📋 Всего: ${totalCount} чел.\n\n` +
+                  `➖➖➖➖➖➖➖➖➖➖\n\n`;
+      }
+
+      message += `🤖 **Для регистрации или изменения данных:**\n` +
+                `Перейдите в личные сообщения с ботом\n` +
+                `👆 Нажмите сюда ➡️ @${botUsername}\n\n` +
+                `Или отправьте команду /start боту в личку`;
+
+      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      
+    } catch (error) {
+      console.error('Error handling /event command:', error);
+      await bot.sendMessage(chatId, "❌ Произошла ошибка при обработке команды.");
+    }
+  });
+
   // Handle /start command
   bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id.toString();
