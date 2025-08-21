@@ -21,7 +21,24 @@ interface UserRegistrationState {
 const userStates = new Map<string, UserRegistrationState>();
 
 export async function startTelegramBot(token: string, storage: IStorage) {
-  const bot = new TelegramBot(token, { polling: true });
+  console.log('Starting Telegram bot...');
+  const bot = new TelegramBot(token, { 
+    polling: { 
+      autoStart: true,
+      params: {
+        timeout: 10,
+        limit: 100,
+      }
+    } 
+  });
+
+  // Handle polling errors
+  bot.on('polling_error', (error) => {
+    console.log('Polling error:', error.message);
+    if (error.message.includes('Conflict')) {
+      console.log('Bot polling conflict detected - another instance may be running');
+    }
+  });
 
   // Handle /start command
   bot.onText(/\/start/, async (msg) => {
@@ -135,8 +152,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             existingData: {
               fullName: lastRegistration.fullName,
               phone: lastRegistration.phone,
-              transportType: lastRegistration.transportType,
-              transportModel: lastRegistration.transportModel,
+              transportType: lastRegistration.transportType as 'monowheel' | 'scooter' | 'spectator' | undefined,
+              transportModel: lastRegistration.transportModel || undefined,
             }
           });
 
@@ -243,8 +260,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             existingData: {
               fullName: lastRegistration.fullName,
               phone: lastRegistration.phone,
-              transportType: lastRegistration.transportType,
-              transportModel: lastRegistration.transportModel,
+              transportType: lastRegistration.transportType as 'monowheel' | 'scooter' | 'spectator' | undefined,
+              transportModel: lastRegistration.transportModel || undefined,
             }
           });
 
@@ -957,15 +974,19 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     const telegramId = msg.from?.id.toString();
     const text = msg.text;
 
+    console.log(`Received message: "${text}" from user ${telegramId} in chat type: ${msg.chat.type}`);
+
     if (!telegramId || !text) return;
 
     // Only handle messages in private chats
     if (msg.chat.type !== 'private') return;
 
     const state = userStates.get(telegramId);
+    console.log(`User state for ${telegramId}:`, state);
     
     // If no state, handle as random message - show available events
     if (!state) {
+      console.log(`No state found for user ${telegramId}, showing available events`);
       try {
         const activeEvents = await storage.getActiveEvents();
         
