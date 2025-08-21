@@ -259,6 +259,7 @@ export type EventWithStats = Event & {
   participantCount: number;
   monowheelCount: number;
   scooterCount: number;
+  eboardCount: number;
   spectatorCount: number;
   chats: Array<Chat & { bot: Bot }>;
 };

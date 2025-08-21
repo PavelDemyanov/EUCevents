@@ -275,6 +275,7 @@ export class DatabaseStorage implements IStorage {
         participantCount: sql<number>`CAST(COUNT(CASE WHEN ${users.isActive} = true THEN 1 END) AS INTEGER)`,
         monowheelCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'monowheel' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`,
         scooterCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'scooter' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`,
+        eboardCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'eboard' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`,
         spectatorCount: sql<number>`CAST(COUNT(CASE WHEN ${users.transportType} = 'spectator' AND ${users.isActive} = true THEN 1 END) AS INTEGER)`
       })
       .from(events)
