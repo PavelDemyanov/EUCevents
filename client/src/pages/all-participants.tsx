@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
     switch (type) {
       case 'monowheel': return '🛞 Моноколесо';
       case 'scooter': return '🛴 Самокат';
+      case 'eboard': return '🏄 Электро-борд';
       case 'spectator': return '👀 Зритель';
       default: return type;
     }
@@ -174,6 +176,7 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
                 <SelectItem value="all">Все типы</SelectItem>
                 <SelectItem value="monowheel">Моноколесо</SelectItem>
                 <SelectItem value="scooter">Самокат</SelectItem>
+                <SelectItem value="eboard">Электро-борд</SelectItem>
                 <SelectItem value="spectator">Зритель</SelectItem>
               </SelectContent>
             </Select>
@@ -193,109 +196,119 @@ export default function AllParticipants({ onBack }: AllParticipantsProps) {
 
       {/* Participants Table */}
       <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr className="text-left">
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Участник</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Контакты</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Транспорт</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Мероприятие</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">№</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Статус</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredParticipants.map((participant: UserWithEvent) => (
-                  <tr key={participant.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{participant.fullName}</div>
-                        <div className="text-sm text-gray-500">
-                          Регистрация: {formatDateTime(participant.createdAt)}
-                        </div>
+        <CardContent>
+          <DataTable
+            data={filteredParticipants}
+            columns={[
+              {
+                key: 'fullName' as keyof UserWithEvent,
+                header: 'Участник',
+                sortable: true,
+                render: (value: string, row: UserWithEvent) => (
+                  <div>
+                    <div className="font-medium text-gray-900">{value}</div>
+                    <div className="text-sm text-gray-500">
+                      Регистрация: {formatDateTime(row.createdAt)}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'phone' as keyof UserWithEvent,
+                header: 'Контакты',
+                sortable: true,
+                render: (value: string, row: UserWithEvent) => (
+                  <div className="text-sm">
+                    <div className="text-gray-900">{formatPhone(value)}</div>
+                    <div className="text-gray-500">
+                      TG: {row.telegramNickname || "—"}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'transportType' as keyof UserWithEvent,
+                header: 'Транспорт',
+                sortable: true,
+                render: (value: string, row: UserWithEvent) => (
+                  <div className="text-sm">
+                    <div>{getTransportTypeLabel(value)}</div>
+                    {row.transportModel && (
+                      <div className="text-gray-500">{row.transportModel}</div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'eventId' as keyof UserWithEvent,
+                header: 'Мероприятие',
+                sortable: true,
+                render: (value: number, row: UserWithEvent) => (
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">
+                      {row.event ? row.event.name : "—"}
+                    </div>
+                    {row.event ? (
+                      <div className="text-gray-500">
+                        {formatDateTime(row.event.datetime)}
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="text-gray-900">{formatPhone(participant.phone)}</div>
-                        <div className="text-gray-500">
-                          TG: {participant.telegramNickname || "—"}
-                        </div>
+                    ) : (
+                      <div className="text-red-500 text-xs">
+                        Мероприятие удалено (ID: {value})
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div>{getTransportTypeLabel(participant.transportType)}</div>
-                        {participant.transportModel && (
-                          <div className="text-gray-500">{participant.transportModel}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {participant.event ? participant.event.name : "—"}
-                        </div>
-                        {participant.event ? (
-                          <div className="text-gray-500">
-                            {formatDateTime(participant.event.datetime)}
-                          </div>
-                        ) : (
-                          <div className="text-red-500 text-xs">
-                            Мероприятие удалено (ID: {participant.eventId})
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        participant.participantNumber 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {participant.participantNumber || "—"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        participant.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {participant.isActive ? 'Активен' : 'Неактивен'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="gap-1 text-red-600 hover:text-red-900"
-                          onClick={() => deleteParticipantMutation.mutate(participant.id)}
-                          disabled={deleteParticipantMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Удалить
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredParticipants.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      {searchQuery || transportFilter !== "all" || statusFilter !== "all" 
-                        ? "Участники не найдены" 
-                        : "Нет зарегистрированных участников"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'participantNumber' as keyof UserWithEvent,
+                header: '№',
+                sortable: true,
+                render: (value: number | null) => (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    value 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {value || "—"}
+                  </span>
+                ),
+              },
+              {
+                key: 'isActive' as keyof UserWithEvent,
+                header: 'Статус',
+                sortable: true,
+                render: (value: boolean) => (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    value 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {value ? 'Активен' : 'Неактивен'}
+                  </span>
+                ),
+              },
+              {
+                key: 'id' as keyof UserWithEvent,
+                header: 'Действия',
+                render: (value: number) => (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-1 text-red-600 hover:text-red-900"
+                    onClick={() => deleteParticipantMutation.mutate(value)}
+                    disabled={deleteParticipantMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="hidden md:inline">Удалить</span>
+                  </Button>
+                ),
+              },
+            ]}
+            searchPlaceholder="Поиск по ФИО, телефону, нику..."
+            searchKey="fullName"
+            pageSize={50}
+          />
         </CardContent>
       </Card>
     </div>
