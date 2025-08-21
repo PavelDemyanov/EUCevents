@@ -176,7 +176,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const handleEditEvent = (event: EventWithStats) => {
     setEditingEvent({
       ...event,
-      allowedTransportTypes: event.allowedTransportTypes || ["monowheel", "scooter", "eboard", "spectator"],
+      allowedTransportTypes: event.allowedTransportTypes || [],
       chatIds: event.chats?.map(chat => chat.id) || []
     });
     setShowEditDialog(true);
