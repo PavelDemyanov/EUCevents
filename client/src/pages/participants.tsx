@@ -451,11 +451,15 @@ export default function Participants({ eventId, onBack }: ParticipantsProps) {
               {
                 key: 'transportType',
                 label: 'Тип транспорта',
-                options: [
-                  { value: 'monowheel', label: 'Моноколесо' },
-                  { value: 'scooter', label: 'Самокат' },
-                  { value: 'spectator', label: 'Зритель' },
-                ],
+                options: (event as any)?.allowedTransportTypes?.map((type: string) => {
+                  const labels: Record<string, string> = {
+                    monowheel: '🛞 Моноколесо',
+                    scooter: '🛴 Самокат',
+                    eboard: '🏄 Электро-борд',
+                    spectator: '👀 Зритель'
+                  };
+                  return { value: type, label: labels[type] || type };
+                }) || [],
               },
               {
                 key: 'isActive',
