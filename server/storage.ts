@@ -362,13 +362,25 @@ export class DatabaseStorage implements IStorage {
 
   async createEvent(event: InsertEvent, chatIds: number[] = []): Promise<Event> {
     const shareCode = this.generateRandomShareCode();
+    
+    console.log("=== STORAGE createEvent ===", { event });
+    
+    // Prepare event data with proper JSON handling
+    const preparedEvent: any = {
+      ...event,
+      shareCode,
+      updatedAt: new Date(),
+    };
+    
+    // Handle allowedTransportTypes specially for JSON column
+    if (event.allowedTransportTypes !== undefined) {
+      preparedEvent.allowedTransportTypes = JSON.stringify(event.allowedTransportTypes);
+      console.log("=== CONVERTED allowedTransportTypes to JSON string ===", preparedEvent.allowedTransportTypes);
+    }
+    
     const [createdEvent] = await db
       .insert(events)
-      .values({
-        ...event,
-        shareCode,
-        updatedAt: new Date(),
-      })
+      .values(preparedEvent)
       .returning();
     
     // Add chat associations
@@ -380,12 +392,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEvent(id: number, updates: Partial<InsertEvent>): Promise<Event> {
+    console.log("=== STORAGE updateEvent ===", { id, updates });
+    
+    // Prepare updates with proper JSON handling
+    const preparedUpdates: any = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    // Handle allowedTransportTypes specially for JSON column
+    if (updates.allowedTransportTypes !== undefined) {
+      preparedUpdates.allowedTransportTypes = JSON.stringify(updates.allowedTransportTypes);
+      console.log("=== CONVERTED allowedTransportTypes to JSON string ===", preparedUpdates.allowedTransportTypes);
+    }
+    
     const [updatedEvent] = await db
       .update(events)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
+      .set(preparedUpdates)
       .where(eq(events.id, id))
       .returning();
     return updatedEvent;
