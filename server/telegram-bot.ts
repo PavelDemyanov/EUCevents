@@ -518,24 +518,30 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
+        // Build keyboard dynamically based on transport type
+        const keyboard = [
+          [
+            { text: "👤 ФИО", callback_data: "change_fullname" },
+            { text: "📱 Телефон", callback_data: "change_phone" }
+          ],
+          [
+            { text: "⚙️ Изменить транспорт/стать зрителем", callback_data: "change_transport_direct" }
+          ]
+        ];
+
+        // Only show model option if user is not a spectator
+        if (state.existingData?.transportType && state.existingData.transportType !== 'spectator') {
+          keyboard[1].push({ text: "🏷️ Модель", callback_data: "change_model" });
+        }
+
+        keyboard.push([{ text: "🔄 Всё заново", callback_data: "change_all" }]);
+
         return bot.sendMessage(
           chatId,
           "Что вы хотите изменить?",
           {
             reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: "👤 ФИО", callback_data: "change_fullname" },
-                  { text: "📱 Телефон", callback_data: "change_phone" }
-                ],
-                [
-                  { text: "⚙️ Изменить транспорт/стать зрителем", callback_data: "change_transport_direct" },
-                  { text: "🏷️ Модель", callback_data: "change_model" }
-                ],
-                [
-                  { text: "🔄 Всё заново", callback_data: "change_all" }
-                ]
-              ]
+              inline_keyboard: keyboard
             }
           }
         );
@@ -596,6 +602,21 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       if (data === 'change_model') {
         const state = userStates.get(telegramId);
         if (state && state.existingData) {
+          // Check if user is a spectator
+          if (state.existingData.transportType === 'spectator') {
+            return bot.sendMessage(
+              chatId,
+              "❌ Зрители не имеют транспорта, поэтому нельзя указать модель.\n\nЕсли хотите участвовать с транспортом, выберите 'Изменить транспорт'.",
+              {
+                reply_markup: {
+                  inline_keyboard: [[
+                    { text: "🏠 Домой", callback_data: "go_home" }
+                  ]]
+                }
+              }
+            );
+          }
+          
           userStates.set(telegramId, {
             ...state,
             step: 'transport_model',
