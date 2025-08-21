@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2 } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Eye, Edit, Trash2, ExternalLink } from "lucide-react";
 import type { EventWithStats, Event } from "@shared/schema";
 
 interface EventsProps {
@@ -394,6 +394,15 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                           title="Участники"
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-8 h-8 p-0"
+                          onClick={() => window.open(`/event/${event.shareCode}`, '_blank')}
+                          title="Список участников (публичная страница)"
+                        >
+                          <ExternalLink className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
