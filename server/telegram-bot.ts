@@ -387,7 +387,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 `📱 Телефон: ${formatPhoneNumber(existingRegistration.phone)}\n` +
                 `🚗 Транспорт: ${getTransportTypeLabel(existingRegistration.transportType)}${existingRegistration.transportModel ? ` (${existingRegistration.transportModel})` : ''}\n` +
                 `🏷️ Номер участника: ${existingRegistration.participantNumber}\n\n` +
-                `Если хотите изменить данные, напишите мне снова.`
+                `Если хотите изменить данные, напишите мне снова.`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: "🏠 Домой", callback_data: "go_home" }
+                    ]]
+                  }
+                }
               );
             } else {
               // Reactivate existing registration instead of creating new one
@@ -411,7 +418,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 `📱 Телефон: ${formatPhoneNumber(updatedUser.phone)}\n` +
                 `🚗 Транспорт: ${getTransportTypeLabel(updatedUser.transportType)}${updatedUser.transportModel ? ` (${updatedUser.transportModel})` : ''}\n` +
                 `🏷️ Ваш номер участника: ${updatedUser.participantNumber}\n\n` +
-                `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+                `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: "🏠 Домой", callback_data: "go_home" }
+                    ]]
+                  }
+                }
               );
             }
           }
@@ -697,7 +711,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const event = await storage.getEvent(eventId);
           return bot.sendMessage(
             chatId,
-            `Вы отказались от участия в мероприятии "${event?.name}". Ваши данные сохранены, но участие деактивировано.`
+            `Вы отказались от участия в мероприятии "${event?.name}". Ваши данные сохранены, но участие деактивировано.`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
       }
@@ -836,7 +857,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           await storage.deactivateUser(user.id);
           return bot.sendMessage(
             chatId,
-            "Вы отказались от участия в мероприятии. Ваши данные сохранены, но участие деактивировано."
+            "Вы отказались от участия в мероприятии. Ваши данные сохранены, но участие деактивировано.",
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
       }
@@ -913,7 +941,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               userStates.delete(telegramId);
               return bot.sendMessage(
                 chatId,
-                `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+                `Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: "🏠 Домой", callback_data: "go_home" }
+                    ]]
+                  }
+                }
               );
             }
           }
@@ -1253,7 +1288,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           userStates.delete(telegramId);
           return bot.sendMessage(
             chatId,
-            `Тип транспорта изменён на: ${getTransportTypeLabel(state.transportType!)} (${text})`
+            `Тип транспорта изменён на: ${getTransportTypeLabel(state.transportType!)} (${text})`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
 
@@ -1400,6 +1442,7 @@ export async function sendEventNotificationToGroup(
     name: string;
     location: string;
     datetime: Date;
+    description?: string;
     monowheelCount: number;
     scooterCount: number;
     spectatorCount: number;
