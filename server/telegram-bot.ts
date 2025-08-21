@@ -392,7 +392,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
               `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}${user.transportModel ? ` (${user.transportModel})` : ''}\n` +
               `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
-              `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+              `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`,
+              {
+                reply_markup: {
+                  inline_keyboard: [[
+                    { text: "🏠 Домой", callback_data: "go_home" }
+                  ]]
+                }
+              }
             );
           } catch (error: any) {
             if (error.code === '23505') {
@@ -640,9 +647,128 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
       }
 
-      if (data === 'back_to_main') {
-        // Restart the /start command logic
-        return bot.sendMessage(chatId, "Используйте команду /start для возврата в главное меню.");
+      if (data === 'back_to_main' || data === 'go_home') {
+        // Navigate back to main menu (equivalent to /start)
+        userStates.delete(telegramId);
+        
+        try {
+          // Get all active events and user registrations
+          const activeEvents = await storage.getActiveEvents();
+          if (activeEvents.length === 0) {
+            return bot.sendMessage(
+              chatId,
+              "🏠 Главное меню\n\nВ данный момент нет активных мероприятий для регистрации."
+            );
+          }
+
+          // Check user's registrations for all active events
+          const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+          const activeRegistrations = existingRegistrations.filter(reg => 
+            reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+          );
+
+          if (activeRegistrations.length > 0) {
+            // User has active registrations, show status and options
+            let statusMessage = "🏠 Главное меню\n\n📋 Ваши текущие регистрации:\n\n";
+            
+            for (const registration of activeRegistrations) {
+              const event = await storage.getEvent(registration.eventId);
+              const transportInfo = registration.transportModel 
+                ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
+                : getTransportTypeLabel(registration.transportType);
+              
+              statusMessage += `🎯 **${event?.name}**\n` +
+                `📍 ${event?.location}\n` +
+                `🕐 ${formatDateTime(event?.datetime!)}\n` +
+                `🚗 Транспорт: ${transportInfo}\n` +
+                `🏷️ Номер: ${registration.participantNumber}\n\n`;
+            }
+
+            // Check if there are events user is not registered for
+            const unregisteredEvents = activeEvents.filter(event => 
+              !activeRegistrations.some(reg => reg.eventId === event.id)
+            );
+
+            if (unregisteredEvents.length > 0) {
+              statusMessage += "📝 Доступны для регистрации:\n";
+              unregisteredEvents.forEach(event => {
+                statusMessage += `• ${event.name} (${formatDateTime(event.datetime)})\n`;
+              });
+              statusMessage += "\n";
+            }
+
+            const keyboard: any[] = [];
+            
+            // Add buttons for events user can register for
+            unregisteredEvents.forEach(event => {
+              keyboard.push([{
+                text: `➕ Регистрация на "${event.name}"`,
+                callback_data: `select_event_${event.id}`
+              }]);
+            });
+
+            // Add management buttons for existing registrations
+            activeRegistrations.forEach(registration => {
+              const event = activeEvents.find(e => e.id === registration.eventId);
+              keyboard.push([{
+                text: `⚙️ Управление "${event?.name}"`,
+                callback_data: `manage_event_${registration.eventId}`
+              }]);
+            });
+
+            return bot.sendMessage(chatId, statusMessage, {
+              reply_markup: { inline_keyboard: keyboard },
+              parse_mode: 'Markdown'
+            });
+          } else {
+            // Show available events for registration
+            if (activeEvents.length === 1) {
+              // Auto-select single event
+              const event = activeEvents[0];
+              userStates.set(telegramId, {
+                step: 'event_selection',
+                telegramNickname: query.from?.username,
+              });
+              
+              return bot.sendMessage(
+                chatId,
+                `🏠 Главное меню\n\n📅 Доступно для регистрации: "${event.name}"\n` +
+                `📍 ${event.location}\n` +
+                `🕐 ${formatDateTime(event.datetime)}\n\n` +
+                `Нажмите кнопку ниже для регистрации:`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: `➕ Регистрация на "${event.name}"`, callback_data: `select_event_${event.id}` }
+                    ]]
+                  }
+                }
+              );
+            } else {
+              // Multiple events available
+              userStates.set(telegramId, {
+                step: 'event_selection',
+                telegramNickname: query.from?.username,
+              });
+              
+              const keyboard = activeEvents.map(event => [{
+                text: `📅 ${event.name} (${formatDateTime(event.datetime)})`,
+                callback_data: `select_event_${event.id}`
+              }]);
+              
+              return bot.sendMessage(
+                chatId,
+                `🏠 Главное меню\n\n📝 Выберите мероприятие для регистрации:`,
+                {
+                  reply_markup: { inline_keyboard: keyboard }
+                }
+              );
+            }
+          }
+        } catch (error) {
+          console.error('Error handling go_home:', error);
+          return bot.sendMessage(chatId, "Произошла ошибка при загрузке главного меню. Попробуйте позже.");
+        }
       }
 
       if (data === 'cancel_participation') {
@@ -691,7 +817,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               userStates.delete(telegramId);
               return bot.sendMessage(
                 chatId,
-                `✅ Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`
+                `✅ Тип транспорта изменён на: ${getTransportTypeLabel(transportType)}`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [[
+                      { text: "🏠 Домой", callback_data: "go_home" }
+                    ]]
+                  }
+                }
               );
             }
           }
@@ -764,7 +897,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               `👤 ФИО: ${state.fullName}\n` +
               `📱 Телефон: ${state.phone}\n` +
               `👀 Статус: Зритель\n` +
-              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`
+              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`,
+              {
+                reply_markup: {
+                  inline_keyboard: [[
+                    { text: "🏠 Домой", callback_data: "go_home" }
+                  ]]
+                }
+              }
             );
           }
 
@@ -792,7 +932,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
             `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)}\n` +
             `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
-            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
       }
@@ -812,8 +959,75 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
     if (!telegramId || !text) return;
 
+    // Only handle messages in private chats
+    if (msg.chat.type !== 'private') return;
+
     const state = userStates.get(telegramId);
-    if (!state) return;
+    
+    // If no state, handle as random message - show available events
+    if (!state) {
+      try {
+        const activeEvents = await storage.getActiveEvents();
+        
+        if (activeEvents.length === 0) {
+          return bot.sendMessage(
+            chatId,
+            "👋 Привет! В данный момент нет активных мероприятий для регистрации.\n\n" +
+            "Используйте команду /start чтобы проверить наличие новых мероприятий."
+          );
+        }
+
+        // Check user's existing registrations
+        const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const activeRegistrations = existingRegistrations.filter(reg => 
+          reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+        );
+
+        let message = "👋 Привет! Вот актуальные мероприятия:\n\n";
+
+        // Show all active events
+        for (const event of activeEvents) {
+          const isRegistered = activeRegistrations.some(reg => reg.eventId === event.id);
+          const status = isRegistered ? "✅ Вы зарегистрированы" : "📝 Доступно для регистрации";
+          
+          message += `🎯 **${event.name}**\n` +
+            `📍 ${event.location}\n` +
+            `🕐 ${formatDateTime(event.datetime)}\n` +
+            `${status}\n\n`;
+        }
+
+        // Check if there are events user can register for
+        const unregisteredEvents = activeEvents.filter(event => 
+          !activeRegistrations.some(reg => reg.eventId === event.id)
+        );
+
+        if (unregisteredEvents.length > 0) {
+          message += "🚀 Для регистрации используйте команду /start";
+          
+          const keyboard = [[
+            { text: "🚀 Начать регистрацию", callback_data: "go_home" }
+          ]];
+
+          return bot.sendMessage(chatId, message, {
+            reply_markup: { inline_keyboard: keyboard },
+            parse_mode: 'Markdown'
+          });
+        } else {
+          message += "✅ Вы зарегистрированы на все доступные мероприятия!\n\n" +
+            "Используйте /start для управления своими регистрациями.";
+          
+          return bot.sendMessage(chatId, message, {
+            parse_mode: 'Markdown'
+          });
+        }
+      } catch (error) {
+        console.error('Error handling random message:', error);
+        return bot.sendMessage(
+          chatId,
+          "Произошла ошибка при загрузке мероприятий. Используйте команду /start для повторной попытки."
+        );
+      }
+    }
 
     try {
       // Handle editing existing data FIRST (before general steps)
@@ -828,7 +1042,17 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (userRegistration) {
           await storage.updateUser(userRegistration.id, { fullName: text });
           userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `✅ ФИО успешно изменено на: ${text}`);
+          return bot.sendMessage(
+            chatId, 
+            `✅ ФИО успешно изменено на: ${text}`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
+          );
         }
       }
 
@@ -847,7 +1071,17 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (userRegistration) {
           await storage.updateUser(userRegistration.id, { phone: normalizedPhone });
           userStates.delete(telegramId);
-          return bot.sendMessage(chatId, `✅ Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`);
+          return bot.sendMessage(
+            chatId, 
+            `✅ Телефон успешно изменён на: ${formatPhoneNumber(normalizedPhone)}`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
+          );
         }
       }
 
@@ -867,7 +1101,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           userStates.delete(telegramId);
           return bot.sendMessage(
             chatId,
-            `✅ Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`
+            `✅ Транспорт успешно изменён на: ${getTransportTypeLabel(state.transportType)} (${text})`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
       }
@@ -965,7 +1206,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               `👤 ФИО: ${state.fullName}\n` +
               `📱 Телефон: ${formatPhoneNumber(state.phone)}\n` +
               `🚗 Транспорт: ${getTransportTypeLabel(state.transportType!)} (${text})\n` +
-              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`
+              `🏷️ Номер участника: ${existingUserForEvent.participantNumber}`,
+              {
+                reply_markup: {
+                  inline_keyboard: [[
+                    { text: "🏠 Домой", callback_data: "go_home" }
+                  ]]
+                }
+              }
             );
           }
 
@@ -993,7 +1241,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `📱 Телефон: ${formatPhoneNumber(user.phone)}\n` +
             `🚗 Транспорт: ${getTransportTypeLabel(user.transportType)} (${user.transportModel})\n` +
             `🏷️ Ваш номер участника: ${user.participantNumber}\n\n` +
-            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`
+            `Вы можете написать мне снова, чтобы изменить тип транспорта или отказаться от участия.`,
+            {
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🏠 Домой", callback_data: "go_home" }
+                ]]
+              }
+            }
           );
         }
       }
