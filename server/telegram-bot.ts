@@ -429,21 +429,53 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const user = await storage.getUserByTelegramId(telegramId);
         if (!user) return;
 
+        // Get event to check allowed transport types
+        const event = await storage.getEvent(user.eventId);
+        if (!event) return;
+
         userStates.set(telegramId, {
           step: 'transport_type',
           eventId: user.eventId,
         });
+
+        // Generate transport type buttons based on allowed types for this event
+        const transportButtons = [];
+        const allowedTypes = event.allowedTransportTypes || ['monowheel', 'scooter', 'eboard', 'spectator'];
+        
+        for (const type of allowedTypes) {
+          let icon = '';
+          let label = '';
+          
+          switch (type) {
+            case 'monowheel':
+              icon = '🛞';
+              label = 'Моноколесо';
+              break;
+            case 'scooter':
+              icon = '🛴';
+              label = 'Самокат';
+              break;
+            case 'eboard':
+              icon = '🏄';
+              label = 'Электро-борд';
+              break;
+            case 'spectator':
+              icon = '👀';
+              label = 'Зритель';
+              break;
+          }
+          
+          if (icon && label) {
+            transportButtons.push([{ text: `${icon} ${label}`, callback_data: `transport_${type}` }]);
+          }
+        }
 
         return bot.sendMessage(
           chatId,
           "Выберите новый тип транспорта:",
           {
             reply_markup: {
-              inline_keyboard: [
-                [{ text: "🛞 Моноколесо", callback_data: "transport_monowheel" }],
-                [{ text: "🛴 Самокат", callback_data: "transport_scooter" }],
-                [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
-              ],
+              inline_keyboard: transportButtons,
             },
           }
         );
@@ -662,23 +694,48 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             fullName: state.existingData?.fullName || '',
             phone: state.existingData?.phone || '',
           });
+
+          // Get event to check allowed transport types
+          const event = state.eventId ? await storage.getEvent(state.eventId) : null;
+          const allowedTypes = event?.allowedTransportTypes || ['monowheel', 'scooter', 'eboard', 'spectator'];
+          
+          // Generate transport type buttons based on allowed types for this event
+          const transportButtons = [];
+          
+          for (const type of allowedTypes) {
+            let icon = '';
+            let label = '';
+            
+            switch (type) {
+              case 'monowheel':
+                icon = '🛞';
+                label = 'Моноколесо';
+                break;
+              case 'scooter':
+                icon = '🛴';
+                label = 'Самокат';
+                break;
+              case 'eboard':
+                icon = '🏄';
+                label = 'Электро-борд';
+                break;
+              case 'spectator':
+                icon = '👀';
+                label = 'Зритель';
+                break;
+            }
+            
+            if (icon && label) {
+              transportButtons.push([{ text: `${icon} ${label}`, callback_data: `transport_${type}` }]);
+            }
+          }
+
           return bot.sendMessage(
             chatId,
             "Выберите тип транспорта:",
             {
               reply_markup: {
-                inline_keyboard: [
-                  [
-                    { text: "🛴 Моноколесо", callback_data: "transport_monowheel" },
-                    { text: "🛵 Самокат", callback_data: "transport_scooter" }
-                  ],
-                  [
-                    { text: "🏄 Электро-борд", callback_data: "transport_eboard" }
-                  ],
-                  [
-                    { text: "👁️ Зритель", callback_data: "transport_spectator" }
-                  ]
-                ]
+                inline_keyboard: transportButtons,
               }
             }
           );
@@ -1399,16 +1456,47 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           phone: normalizedPhone,
         });
 
+        // Get event to check allowed transport types
+        const event = state.eventId ? await storage.getEvent(state.eventId) : null;
+        const allowedTypes = event?.allowedTransportTypes || ['monowheel', 'scooter', 'eboard', 'spectator'];
+        
+        // Generate transport type buttons based on allowed types for this event
+        const transportButtons = [];
+        
+        for (const type of allowedTypes) {
+          let icon = '';
+          let label = '';
+          
+          switch (type) {
+            case 'monowheel':
+              icon = '🛞';
+              label = 'Моноколесо';
+              break;
+            case 'scooter':
+              icon = '🛴';
+              label = 'Самокат';
+              break;
+            case 'eboard':
+              icon = '🏄';
+              label = 'Электро-борд';
+              break;
+            case 'spectator':
+              icon = '👀';
+              label = 'Зритель';
+              break;
+          }
+          
+          if (icon && label) {
+            transportButtons.push([{ text: `${icon} ${label}`, callback_data: `transport_${type}` }]);
+          }
+        }
+
         return bot.sendMessage(
           chatId,
           "Отлично! Последний шаг - выберите ваш тип транспорта:",
           {
             reply_markup: {
-              inline_keyboard: [
-                [{ text: "🛞 Моноколесо", callback_data: "transport_monowheel" }],
-                [{ text: "🛴 Самокат", callback_data: "transport_scooter" }],
-                [{ text: "👀 Зритель", callback_data: "transport_spectator" }],
-              ],
+              inline_keyboard: transportButtons,
             },
           }
         );
