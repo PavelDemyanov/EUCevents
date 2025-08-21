@@ -23,37 +23,7 @@ const userStates = new Map<string, UserRegistrationState>();
 // Global bot instance to prevent multiple polling
 let activeBotInstance: TelegramBot | null = null;
 
-// Helper function to generate public event URL
-function getPublicEventUrl(shareCode: string): string {
-  // Use Replit domain
-  const replitDomain = process.env.REPLIT_DOMAIN;
-  if (replitDomain) {
-    return `https://${replitDomain}/public/${shareCode}`;
-  }
-  
-  // Fallback for development or if domain not set
-  return `https://your-repl.replit.app/public/${shareCode}`;
-}
 
-// Helper function to get or create share code for event
-async function getEventShareCode(storage: IStorage, eventId: number): Promise<string | null> {
-  try {
-    const event = await storage.getEvent(eventId);
-    if (!event) return null;
-    
-    // If event already has share code, return it
-    if (event.shareCode) {
-      return event.shareCode;
-    }
-    
-    // Generate new share code
-    const shareCode = await storage.generateShareCode(eventId);
-    return shareCode;
-  } catch (error) {
-    console.error('Error getting share code:', error);
-    return null;
-  }
-}
 
 export async function startTelegramBot(token: string, storage: IStorage) {
   // Stop existing bot if running
@@ -822,13 +792,22 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             if (unregisteredEvents.length > 0) {
               statusMessage += "📝 Доступны для регистрации:\n\n";
               for (const event of unregisteredEvents) {
-                const shareCode = await getEventShareCode(storage, event.id);
-                const publicLink = shareCode ? `\n🔗 ${getPublicEventUrl(shareCode)}` : '';
+                // Get transport statistics for this event
+                const participants = await storage.getUsersByEventId(event.id);
+                const activeParticipants = participants.filter(p => p.isActive);
+                const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
+                const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+                const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+                const totalCount = activeParticipants.length;
+                
+                const stats = totalCount > 0 ? 
+                  `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 👀${spectatorCount} (всего: ${totalCount})` : 
+                  `\n📊 Пока никто не зарегистрирован`;
                 
                 statusMessage += `🎯 **${event.name}**\n` +
                   (event.description ? `📝 ${event.description}\n` : '') +
                   `📍 ${event.location}\n` +
-                  `🕐 ${formatDateTime(event.datetime)}${publicLink}\n\n`;
+                  `🕐 ${formatDateTime(event.datetime)}${stats}\n\n`;
               }
             }
 
@@ -865,15 +844,24 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 telegramNickname: query.from?.username,
               });
               
-              const shareCode = await getEventShareCode(storage, event.id);
-              const publicLink = shareCode ? `\n🔗 Публичная ссылка: ${getPublicEventUrl(shareCode)}` : '';
+              // Get transport statistics for this event
+              const participants = await storage.getUsersByEventId(event.id);
+              const activeParticipants = participants.filter(p => p.isActive);
+              const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
+              const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+              const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+              const totalCount = activeParticipants.length;
+              
+              const stats = totalCount > 0 ? 
+                `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 👀${spectatorCount} (всего: ${totalCount})` : 
+                `\n📊 Пока никто не зарегистрирован`;
               
               return bot.sendMessage(
                 chatId,
                 `🏠 Главное меню\n\n📅 Доступно для регистрации: "${event.name}"\n` +
                 (event.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event.location}\n` +
-                `🕐 ${formatDateTime(event.datetime)}${publicLink}\n\n` +
+                `🕐 ${formatDateTime(event.datetime)}${stats}\n\n` +
                 `Нажмите кнопку ниже для регистрации:`,
                 {
                   reply_markup: {
@@ -1153,15 +1141,23 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const isRegistered = activeRegistrations.some(reg => reg.eventId === event.id);
           const status = isRegistered ? "✅ Вы зарегистрированы" : "📝 Доступно для регистрации";
           
-          // Get share code and create public link
-          const shareCode = await getEventShareCode(storage, event.id);
-          const publicLink = shareCode ? `\n🔗 Публичная ссылка: ${getPublicEventUrl(shareCode)}` : '';
+          // Get transport statistics for this event
+          const participants = await storage.getUsersByEventId(event.id);
+          const activeParticipants = participants.filter(p => p.isActive);
+          const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
+          const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+          const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+          const totalCount = activeParticipants.length;
+          
+          const stats = totalCount > 0 ? 
+            `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 👀${spectatorCount} (всего: ${totalCount})` : 
+            `\n📊 Пока никто не зарегистрирован`;
           
           message += `🎯 **${event.name}**\n` +
             (event.description ? `📝 ${event.description}\n` : '') +
             `📍 ${event.location}\n` +
             `🕐 ${formatDateTime(event.datetime)}\n` +
-            `${status}${publicLink}\n\n`;
+            `${status}${stats}\n\n`;
         }
 
         // Check if there are events user can register for
@@ -1514,13 +1510,11 @@ export async function sendEventNotificationToGroup(
   },
   botUsername?: string
 ) {
-  const publicLink = eventData.shareCode ? `\n🔗 Публичная ссылка: ${getPublicEventUrl(eventData.shareCode)}` : '';
-  
   const message = `🏁 УВЕДОМЛЕНИЕ О МЕРОПРИЯТИИ\n\n` +
     `📅 ${eventData.name}\n` +
     (eventData.description ? `📝 ${eventData.description}\n` : '') +
     `📍 ${eventData.location}\n` +
-    `🕐 ${formatDateTime(eventData.datetime)}${publicLink}\n\n` +
+    `🕐 ${formatDateTime(eventData.datetime)}\n\n` +
     `📊 ТЕКУЩАЯ СТАТИСТИКА УЧАСТНИКОВ:\n` +
     `🛞 Моноколесо: ${eventData.monowheelCount} чел.\n` +
     `🛴 Самокат: ${eventData.scooterCount} чел.\n` +
