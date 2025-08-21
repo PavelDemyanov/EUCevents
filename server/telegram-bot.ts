@@ -29,7 +29,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     console.log('Stopping existing bot instance...');
     try {
       await activeBotInstance.stopPolling();
+      activeBotInstance.removeAllListeners();
       activeBotInstance = null;
+      // Wait for cleanup
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.log('Error stopping existing bot:', error);
     }
@@ -37,23 +40,25 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
   console.log('Starting new Telegram bot...');
   
-  // First, try to clear any webhook that might be set
+  // Clear webhook more aggressively
   try {
     const webhookBot = new TelegramBot(token);
     await webhookBot.deleteWebHook();
     console.log('Webhook cleared successfully');
+    
+    // Also try to get updates to clear any pending ones
+    try {
+      await webhookBot.getUpdates({ timeout: 1, limit: 100 });
+      console.log('Cleared pending updates');
+    } catch (e) {
+      console.log('No pending updates to clear');
+    }
   } catch (error) {
     console.log('Failed to clear webhook:', error);
   }
 
   const bot = new TelegramBot(token, { 
-    polling: { 
-      autoStart: false, // Start manually to avoid conflicts
-      params: {
-        timeout: 10,
-        limit: 100,
-      }
-    } 
+    polling: false // Disable auto-start completely
   });
 
   // Handle polling errors
@@ -1309,13 +1314,40 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     }
   });
 
-  // Start polling manually
-  try {
-    await bot.startPolling();
-    console.log(`Telegram bot started successfully with token: ${token.substring(0, 10)}...`);
-  } catch (error) {
-    console.error('Failed to start bot polling:', error);
-  }
+  // Start polling manually with retry logic
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  const startPollingWithRetry = async () => {
+    try {
+      await bot.startPolling({
+        restart: true,
+        polling: {
+          autoStart: false,
+          params: {
+            timeout: 10,
+            limit: 100,
+          }
+        }
+      });
+      console.log(`Telegram bot started successfully with token: ${token.substring(0, 10)}...`);
+      return true;
+    } catch (error: any) {
+      console.log(`Polling attempt ${retryCount + 1} failed:`, error.message);
+      
+      if (error.message.includes('Conflict') && retryCount < maxRetries) {
+        retryCount++;
+        console.log(`Retrying in ${retryCount * 2} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, retryCount * 2000));
+        return await startPollingWithRetry();
+      } else {
+        console.error('Failed to start bot polling after retries:', error);
+        return false;
+      }
+    }
+  };
+  
+  await startPollingWithRetry();
 
   // Export bot instance for external use
   return bot;
