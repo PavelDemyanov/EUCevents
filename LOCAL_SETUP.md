@@ -57,8 +57,16 @@ psql -U event_user -d event_management -f database_dump.sql
 
 1. **Клонирование и настройка:**
 ```bash
+# Создать директорию проекта
+mkdir ~/event-management
+cd ~/event-management
+
+# Клонировать репозиторий и переместить файлы в текущую директорию
 git clone https://github.com/PavelDemyanov/EUCevents.git
-cd EUCevents
+mv EUCevents/* EUCevents/.* . 2>/dev/null || true
+rmdir EUCevents
+
+# Установить зависимости
 npm install
 
 # Установка dotenv (если не установлено автоматически)

@@ -17,8 +17,10 @@ chmod +x install-macos-arm.sh
 # Перейти в директорию приложения
 cd ~/event-management
 
-# Клонировать репозиторий EUCevents
-git clone https://github.com/PavelDemyanov/EUCevents.git .
+# Клонировать репозиторий EUCevents и переместить файлы в текущую директорию
+git clone https://github.com/PavelDemyanov/EUCevents.git
+mv EUCevents/* EUCevents/.* . 2>/dev/null || true
+rmdir EUCevents
 
 # Завершить настройку
 ./complete-setup.sh
