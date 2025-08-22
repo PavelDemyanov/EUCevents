@@ -95,6 +95,14 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
   - Default admin credentials: admin/admin123 (bcrypt hashed)
   - Support for all transport types with proper array handling in PostgreSQL
 
+- **Local Installation Fixes (August 22, 2025)**: Fixed critical issues in local deployment
+  - Fixed database permissions issues by creating database_setup_script.sql without owner dependencies
+  - Resolved port conflicts by changing server host from 0.0.0.0 to 127.0.0.1 and removing reusePort
+  - Fixed ES modules compatibility in server/db.ts for local PostgreSQL connections
+  - Updated install-macos-arm.sh to automatically clone repository and apply all fixes
+  - Enhanced QUICK_FIX_CLONE.md with complete troubleshooting guide
+  - All installation scripts now work end-to-end without manual intervention
+
 - **Previous Updates (August 20, 2025)**:
   - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
   - **Public Pages**: Created public event view without phone numbers and admin functions
