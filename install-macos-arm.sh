@@ -206,19 +206,48 @@ fi
 
 # Setup database schema
 echo "🗄️  Setting up database schema..."
-if [ -f "database_dump.sql" ]; then
+if [ -f "database_dump_clean.sql" ]; then
+    echo "📥 Importing clean database dump..."
+    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_dump_clean.sql
+    echo "✅ Database schema imported successfully"
+elif [ -f "database_dump.sql" ]; then
     echo "📥 Importing database dump..."
-    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_dump.sql
+    # First, clean existing tables if any
+    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -c "
+        DROP TABLE IF EXISTS event_chats CASCADE;
+        DROP TABLE IF EXISTS fixed_number_bindings CASCADE;
+        DROP TABLE IF EXISTS reserved_numbers CASCADE;
+        DROP TABLE IF EXISTS users CASCADE;
+        DROP TABLE IF EXISTS chats CASCADE;
+        DROP TABLE IF EXISTS bots CASCADE;
+        DROP TABLE IF EXISTS events CASCADE;
+        DROP TABLE IF EXISTS admin_users CASCADE;
+    " 2>/dev/null || true
+    
+    # Import the dump
+    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_dump.sql 2>/dev/null || {
+        echo "⚠️  Database dump import had issues, trying schema push..."
+        npm run db:push 2>/dev/null || echo "Schema setup requires manual configuration"
+    }
 else
     echo "⚠️  No database dump found, using schema push..."
     npm run db:push 2>/dev/null || echo "Schema push not available, manual database setup required"
 fi
 
-# Create .env from example if it doesn't exist
+# Create .env from local example if it doesn't exist
 if [ ! -f ".env" ]; then
-    cp .env.example .env
-    echo "📝 Created .env file from template"
-    echo "⚠️  Please edit .env and add your TELEGRAM_BOT_TOKEN"
+    if [ -f ".env.local.example" ]; then
+        cp .env.local.example .env
+        # Update with local PostgreSQL connection
+        sed -i '' 's/postgresql:\/\/event_user:event_password@localhost:5432\/event_management/postgresql:\/\/eventapp:eventapp123@localhost:5432\/event_management/' .env
+        sed -i '' 's/your_very_long_random_secret_key_here/euc-events-secret-key-'$(date +%s)'/' .env
+        echo "📝 Created .env file from local template"
+        echo "⚠️  Please edit .env and add your TELEGRAM_BOT_TOKEN"
+    else
+        cp .env.example .env
+        echo "📝 Created .env file from template"
+        echo "⚠️  Please edit .env and add your TELEGRAM_BOT_TOKEN"
+    fi
 fi
 
 echo
