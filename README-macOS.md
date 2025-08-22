@@ -34,7 +34,10 @@ cd ~/event-management
 # Один из вариантов:
 
 # Вариант 1: Клонирование из Git репозитория
-git clone https://github.com/PavelDemyanov/EUCevents.git .
+git clone https://github.com/PavelDemyanov/EUCevents.git temp_clone
+mv temp_clone/* . 2>/dev/null || true
+mv temp_clone/.* . 2>/dev/null || true
+rm -rf temp_clone
 
 # Вариант 2: Копирование файлов из архива
 # Распакуйте архив с приложением и скопируйте все файлы в ~/event-management

@@ -22,11 +22,15 @@ ls -la
 ## Вариант 2: Начать заново с правильным клонированием
 
 ```bash
-# Удалить подпапку
+# Удалить все файлы из папки (кроме системных)
 rm -rf EUCevents
+find . -mindepth 1 -maxdepth 1 -not -name ".*" -exec rm -rf {} \;
 
-# Клонировать правильно (с точкой в конце)
-git clone https://github.com/PavelDemyanov/EUCevents.git .
+# Клонировать во временную папку и переместить файлы
+git clone https://github.com/PavelDemyanov/EUCevents.git temp_clone
+mv temp_clone/* . 2>/dev/null || true
+mv temp_clone/.* . 2>/dev/null || true
+rm -rf temp_clone
 
 # Завершить настройку
 ./complete-setup.sh
