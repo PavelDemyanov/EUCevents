@@ -8,6 +8,37 @@ const path = require('path');
 
 console.log('🔍 Проверка локальной конфигурации...\n');
 
+// Проверка безопасности - есть ли конфиденциальные файлы в Git
+console.log('🔒 Проверка безопасности...');
+const sensitiveFiles = [
+    '.env', 
+    'database_dump.sql', 
+    'backup.sql',
+    'config.json'
+];
+
+let foundSensitiveFiles = [];
+for (const file of sensitiveFiles) {
+    if (fs.existsSync(file)) {
+        // Проверим, не отслеживается ли файл Git-ом
+        try {
+            const { execSync } = require('child_process');
+            execSync(`git ls-files --error-unmatch ${file}`, {stdio: 'pipe'});
+            foundSensitiveFiles.push(file);
+        } catch (error) {
+            // Файл не отслеживается Git-ом - это хорошо
+        }
+    }
+}
+
+if (foundSensitiveFiles.length > 0) {
+    console.log('⚠️  ВНИМАНИЕ: Конфиденциальные файлы в Git:');
+    foundSensitiveFiles.forEach(f => console.log(`   - ${f}`));
+    console.log('   Удалите их из Git: git rm --cached filename');
+} else {
+    console.log('✅ Конфиденциальные файлы защищены от Git');
+}
+
 // Проверка .env файла
 if (!fs.existsSync('.env')) {
     console.log('❌ Файл .env не найден');
