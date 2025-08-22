@@ -163,6 +163,25 @@ EOF
 # Create logs directory
 mkdir -p "$APP_DIR/logs"
 
+# Clone application files automatically
+echo "📥 Cloning EUCevents application..."
+if [ -d "$APP_DIR/.git" ] || [ -f "$APP_DIR/package.json" ]; then
+    echo "⚠️  Application files already exist, skipping clone"
+else
+    # Clone into temporary directory and move files
+    TEMP_DIR=$(mktemp -d)
+    git clone https://github.com/PavelDemyanov/EUCevents.git "$TEMP_DIR"
+    
+    # Move all files from temp to app directory
+    mv "$TEMP_DIR"/* "$APP_DIR/" 2>/dev/null || true
+    mv "$TEMP_DIR"/.* "$APP_DIR/" 2>/dev/null || true
+    
+    # Clean up temp directory
+    rm -rf "$TEMP_DIR"
+    
+    echo "✅ Application files cloned successfully"
+fi
+
 # Create completion script
 cat > "$APP_DIR/complete-setup.sh" << 'COMPLETION_SCRIPT'
 #!/bin/bash
@@ -175,22 +194,7 @@ echo "🚀 Completing Event Management System setup..."
 # Check if package.json exists
 if [ ! -f "package.json" ]; then
     echo "❌ package.json not found."
-    echo "📋 You need to place the application files in this directory first:"
-    echo "   1. Download the application files"
-    echo "   2. Extract them to: $APP_DIR"
-    echo "   3. Or clone from git:"
-    echo "      git clone https://github.com/PavelDemyanov/EUCevents.git"
-    echo "      mv EUCevents/* EUCevents/.* . 2>/dev/null || true"
-    echo "      rmdir EUCevents"
-    echo ""
-    echo "🔗 Expected files:"
-    echo "   - package.json"
-    echo "   - server/"
-    echo "   - client/"
-    echo "   - shared/"
-    echo "   - database_dump.sql (optional)"
-    echo ""
-    echo "Run this script again after placing the application files."
+    echo "📋 Application files missing. Please run the main installation script again."
     exit 1
 fi
 
@@ -332,13 +336,9 @@ echo "🗄️  PostgreSQL database ready"
 echo "⚙️  PM2 process manager installed"
 echo
 echo "🎯 Next steps:"
-echo "1. Place your application files in: $APP_DIR"
-echo "2. Run the completion script: $APP_DIR/complete-setup.sh"
-echo
-echo "📋 Or if you have the application files ready:"
-echo "1. Copy/clone your application files to $APP_DIR"
-echo "2. Run: $APP_DIR/complete-setup.sh"
-echo "3. Start: $APP_DIR/start.sh"
+echo "1. Run the completion script: $APP_DIR/complete-setup.sh"
+echo "2. Edit the configuration and add your Telegram bot token"
+echo "3. Start the application: $APP_DIR/start.sh"
 echo
 echo "🔧 Useful scripts created:"
 echo "   - $APP_DIR/complete-setup.sh (complete installation)"

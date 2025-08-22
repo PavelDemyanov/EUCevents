@@ -1,3 +1,7 @@
+import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
+import { Pool as PgPool } from 'pg';
+import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
@@ -15,17 +19,11 @@ let db: any;
 
 if (isNeonDatabase) {
   // Use Neon serverless configuration
-  const { Pool: NeonPool, neonConfig } = require('@neondatabase/serverless');
-  const { drizzle: neonDrizzle } = require('drizzle-orm/neon-serverless');
-  
   neonConfig.webSocketConstructor = ws;
   pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
   db = neonDrizzle({ client: pool, schema });
 } else {
-  // Use regular PostgreSQL configuration
-  const { Pool: PgPool } = require('pg');
-  const { drizzle: pgDrizzle } = require('drizzle-orm/node-postgres');
-  
+  // Use regular PostgreSQL configuration  
   pool = new PgPool({ connectionString: process.env.DATABASE_URL });
   db = pgDrizzle({ client: pool, schema });
 }

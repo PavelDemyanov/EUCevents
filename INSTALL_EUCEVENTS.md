@@ -2,27 +2,22 @@
 
 Быстрая инструкция для установки системы управления мероприятиями EUCevents на macOS.
 
-## Автоматическая установка
+## Автоматическая установка (всё в одном скрипте)
 
-### 1. Установка системы
+### 1. Полная установка одной командой
 ```bash
-# Скачать и запустить скрипт установки
+# Скачать и запустить скрипт установки (автоматически клонирует репозиторий)
 curl -O https://raw.githubusercontent.com/PavelDemyanov/EUCevents/main/install-macos-arm.sh
 chmod +x install-macos-arm.sh
 ./install-macos-arm.sh
 ```
 
-### 2. Клонирование репозитория
+### 2. Завершить настройку
 ```bash
 # Перейти в директорию приложения
 cd ~/event-management
 
-# Клонировать репозиторий EUCevents и переместить файлы в текущую директорию
-git clone https://github.com/PavelDemyanov/EUCevents.git
-mv EUCevents/* EUCevents/.* . 2>/dev/null || true
-rmdir EUCevents
-
-# Завершить настройку
+# Завершить настройку (установить зависимости и настроить базу)
 ./complete-setup.sh
 ```
 
