@@ -83,6 +83,16 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
   - Changed electric board emoji from 🏄 to 🛹 across all interfaces (August 21, 2025)
   - System now supports 4 transport types: monowheel (🛞), scooter (🛴), electric board (🛹), spectator (👀)
 
+- **Local Database Setup (August 22, 2025)**: Complete PostgreSQL setup package for local deployment
+  - Created comprehensive SQL database dump (database_dump.sql) with complete schema and default admin user
+  - Generated LOCAL_SETUP.md with detailed installation instructions for Ubuntu/Debian, CentOS/RHEL, macOS, and Windows
+  - Added automated setup script (setup_local_db.sh) for one-command database configuration
+  - Created .env.local.example with all necessary environment variables for local deployment
+  - Included systemd service configuration for production Linux deployment
+  - Database includes all tables: events, users, admin_users, bots, chats, reserved_numbers, fixed_number_bindings, event_chats
+  - Default admin credentials: admin/admin123 (bcrypt hashed)
+  - Support for all transport types with proper array handling in PostgreSQL
+
 - **Previous Updates (August 20, 2025)**:
   - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
   - **Public Pages**: Created public event view without phone numbers and admin functions
