@@ -30,8 +30,21 @@ chmod +x install-macos-arm.sh
 # Перейти в директорию приложения
 cd ~/event-management
 
-# Скопировать файлы приложения или клонировать репозиторий
-# git clone <your-repository-url> .
+# ВАЖНО: Скопировать ВСЕ файлы приложения в эту директорию
+# Один из вариантов:
+
+# Вариант 1: Клонирование из Git репозитория
+git clone https://github.com/your-username/your-repo.git .
+
+# Вариант 2: Копирование файлов из архива
+# Распакуйте архив с приложением и скопируйте все файлы в ~/event-management
+
+# Вариант 3: Копирование с другого компьютера
+# scp -r user@server:/path/to/app/* .
+
+# Проверить что файлы на месте
+ls -la
+# Должны быть: package.json, server/, client/, shared/, и другие файлы
 
 # Завершить настройку
 ./complete-setup.sh

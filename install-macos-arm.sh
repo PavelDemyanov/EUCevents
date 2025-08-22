@@ -174,7 +174,20 @@ echo "🚀 Completing Event Management System setup..."
 
 # Check if package.json exists
 if [ ! -f "package.json" ]; then
-    echo "❌ package.json not found. Please ensure application files are in $APP_DIR"
+    echo "❌ package.json not found."
+    echo "📋 You need to place the application files in this directory first:"
+    echo "   1. Download the application files"
+    echo "   2. Extract them to: $APP_DIR"
+    echo "   3. Or clone from git: git clone <repository-url> ."
+    echo ""
+    echo "🔗 Expected files:"
+    echo "   - package.json"
+    echo "   - server/"
+    echo "   - client/"
+    echo "   - shared/"
+    echo "   - database_dump.sql (optional)"
+    echo ""
+    echo "Run this script again after placing the application files."
     exit 1
 fi
 
