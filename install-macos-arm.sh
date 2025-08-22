@@ -217,6 +217,13 @@ if (isNeonDatabase) {
 export { pool, db };
 DB_FIX
         echo "✅ Database configuration fixed"
+        
+        # Fix server listen configuration for local development
+        if [ -f "$APP_DIR/server/index.ts" ]; then
+            sed -i '' 's/host: "0.0.0.0",/host: "127.0.0.1",/' "$APP_DIR/server/index.ts"
+            sed -i '' 's/reusePort: true,/\/\/ reusePort: true,/' "$APP_DIR/server/index.ts"
+            echo "✅ Server configuration fixed for local development"
+        fi
     fi
     
     # Recreate PM2 ecosystem file to overwrite any from clone
@@ -279,32 +286,23 @@ fi
 
 # Setup database schema
 echo "🗄️  Setting up database schema..."
-if [ -f "database_dump_clean.sql" ]; then
+if [ -f "database_setup_script.sql" ]; then
+    echo "📥 Setting up database with setup script..."
+    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_setup_script.sql
+    echo "✅ Database schema setup successfully"
+elif [ -f "database_dump_clean.sql" ]; then
     echo "📥 Importing clean database dump..."
     PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_dump_clean.sql
     echo "✅ Database schema imported successfully"
-elif [ -f "database_dump.sql" ]; then
-    echo "📥 Importing database dump..."
-    # First, clean existing tables if any
-    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -c "
-        DROP TABLE IF EXISTS event_chats CASCADE;
-        DROP TABLE IF EXISTS fixed_number_bindings CASCADE;
-        DROP TABLE IF EXISTS reserved_numbers CASCADE;
-        DROP TABLE IF EXISTS users CASCADE;
-        DROP TABLE IF EXISTS chats CASCADE;
-        DROP TABLE IF EXISTS bots CASCADE;
-        DROP TABLE IF EXISTS events CASCADE;
-        DROP TABLE IF EXISTS admin_users CASCADE;
-    " 2>/dev/null || true
-    
-    # Import the dump
-    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_dump.sql 2>/dev/null || {
-        echo "⚠️  Database dump import had issues, trying schema push..."
-        npm run db:push 2>/dev/null || echo "Schema setup requires manual configuration"
-    }
 else
-    echo "⚠️  No database dump found, using schema push..."
-    npm run db:push 2>/dev/null || echo "Schema push not available, manual database setup required"
+    echo "⚠️  Using npm db:push for schema setup..."
+    npm run db:push --force 2>/dev/null || echo "Schema push not available, using alternative setup"
+    
+    # Create admin user manually if db:push worked
+    PGPASSWORD=eventapp123 psql -U eventapp -d event_management -c "
+    INSERT INTO admin_users (username, password, full_name, is_super_admin) 
+    VALUES ('admin', '\$2b\$10\$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Администратор системы', true)
+    ON CONFLICT (username) DO NOTHING;" 2>/dev/null || echo "Admin user setup skipped"
 fi
 
 # Create .env from local example if it doesn't exist

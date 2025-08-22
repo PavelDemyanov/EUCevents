@@ -75,9 +75,135 @@ export { pool, db };
 EOF
 
 echo "✅ server/db.ts исправлен"
+
+# Исправить порт и хост в server/index.ts
+sed -i '' 's/host: "0.0.0.0",/host: "127.0.0.1",/' server/index.ts
+sed -i '' 's/reusePort: true,/\/\/ reusePort: true,/' server/index.ts
+echo "✅ server/index.ts исправлен"
 ```
 
-## Исправление проблем с базой данных
+## Быстрая установка базы данных
+
+Создайте правильную схему базы данных:
+
+```bash
+cd ~/event-management
+
+# Создать скрипт установки базы данных
+cat > database_setup_script.sql << 'EOF'
+BEGIN;
+DROP TABLE IF EXISTS event_chats CASCADE;
+DROP TABLE IF EXISTS fixed_number_bindings CASCADE;
+DROP TABLE IF EXISTS reserved_numbers CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS chats CASCADE;
+DROP TABLE IF EXISTS bots CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS admin_users CASCADE;
+
+CREATE TABLE admin_users (
+    id SERIAL PRIMARY KEY,
+    username character varying(50) NOT NULL UNIQUE,
+    password character varying(255) NOT NULL,
+    full_name character varying(100),
+    email character varying(100),
+    is_active boolean DEFAULT true,
+    is_super_admin boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    name character varying(255) NOT NULL,
+    date character varying(20) NOT NULL,
+    time character varying(10) NOT NULL,
+    location character varying(255) NOT NULL,
+    description text DEFAULT '',
+    allowed_transport_types text[] DEFAULT ARRAY['monowheel'::text, 'scooter'::text, 'eboard'::text, 'spectator'::text],
+    share_code character varying(20),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE bots (
+    id SERIAL PRIMARY KEY,
+    token character varying(255) NOT NULL,
+    name character varying(100),
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE chats (
+    id SERIAL PRIMARY KEY,
+    chat_id bigint NOT NULL UNIQUE,
+    chat_type character varying(20) DEFAULT 'private',
+    title character varying(255),
+    username character varying(255),
+    first_name character varying(255),
+    last_name character varying(255),
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    telegram_nickname character varying(255),
+    full_name character varying(255) NOT NULL,
+    phone_number character varying(20) NOT NULL,
+    transport_type character varying(20) NOT NULL,
+    transport_model character varying(255),
+    participant_number integer,
+    event_id integer NOT NULL,
+    chat_id bigint,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE SET NULL
+);
+
+CREATE TABLE reserved_numbers (
+    id SERIAL PRIMARY KEY,
+    number integer NOT NULL,
+    event_id integer NOT NULL,
+    chat_id bigint,
+    reserved_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE SET NULL,
+    UNIQUE(number, event_id)
+);
+
+CREATE TABLE fixed_number_bindings (
+    id SERIAL PRIMARY KEY,
+    chat_id bigint NOT NULL,
+    number integer NOT NULL,
+    event_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
+    UNIQUE(chat_id, event_id)
+);
+
+CREATE TABLE event_chats (
+    id SERIAL PRIMARY KEY,
+    event_id integer NOT NULL,
+    chat_id bigint NOT NULL,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
+    UNIQUE(event_id, chat_id)
+);
+
+INSERT INTO admin_users (username, password, full_name, is_super_admin) 
+VALUES ('admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Администратор системы', true);
+
+COMMIT;
+EOF
+
+# Установить схему базы данных
+PGPASSWORD=eventapp123 psql -U eventapp -d event_management -f database_setup_script.sql
+echo "✅ База данных настроена"
+```
+
+## Исправление проблем с базой данных (старый способ)
 
 Если у вас были ошибки с базой данных, выполните:
 
