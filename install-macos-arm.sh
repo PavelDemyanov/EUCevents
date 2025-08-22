@@ -160,24 +160,23 @@ module.exports = {
 };
 EOF
 
-# Create logs directory
-mkdir -p "$APP_DIR/logs"
-
-# Clone application files automatically
+# Clone application files first
 echo "📥 Cloning EUCevents application..."
-if [ -d "$APP_DIR/.git" ] || [ -f "$APP_DIR/package.json" ]; then
+if [ -f "$APP_DIR/package.json" ]; then
     echo "⚠️  Application files already exist, skipping clone"
 else
-    # Clone into temporary directory and move files
-    TEMP_DIR=$(mktemp -d)
-    git clone https://github.com/PavelDemyanov/EUCevents.git "$TEMP_DIR"
+    # Remove any existing files first (keep the ecosystem.config.js and .env.example we just created)
+    find "$APP_DIR" -mindepth 1 -maxdepth 1 -not -name "ecosystem.config.js" -not -name ".env.example" -not -name "logs" -exec rm -rf {} \;
     
-    # Move all files from temp to app directory
-    mv "$TEMP_DIR"/* "$APP_DIR/" 2>/dev/null || true
-    mv "$TEMP_DIR"/.* "$APP_DIR/" 2>/dev/null || true
+    # Clone directly into the app directory
+    git clone https://github.com/PavelDemyanov/EUCevents.git "$APP_DIR/temp_clone"
     
-    # Clean up temp directory
-    rm -rf "$TEMP_DIR"
+    # Move all files from clone to app directory
+    mv "$APP_DIR/temp_clone"/* "$APP_DIR/" 2>/dev/null || true
+    mv "$APP_DIR/temp_clone"/.* "$APP_DIR/" 2>/dev/null || true
+    
+    # Clean up temp clone directory
+    rm -rf "$APP_DIR/temp_clone"
     
     echo "✅ Application files cloned successfully"
     
@@ -219,7 +218,38 @@ export { pool, db };
 DB_FIX
         echo "✅ Database configuration fixed"
     fi
+    
+    # Recreate PM2 ecosystem file to overwrite any from clone
+    echo "⚙️  Creating PM2 configuration..."
+    cat > "$APP_DIR/ecosystem.config.js" << 'PM2_CONFIG'
+module.exports = {
+  apps: [{
+    name: 'event-management',
+    script: 'server/index.ts',
+    interpreter: 'tsx',
+    cwd: process.cwd(),
+    env: {
+      NODE_ENV: 'development',
+      PORT: 5000
+    },
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 5000
+    },
+    watch: false,
+    ignore_watch: ['node_modules', 'logs', '*.log'],
+    max_memory_restart: '200M',
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true
+  }]
+};
+PM2_CONFIG
 fi
+
+# Create logs directory
+mkdir -p "$APP_DIR/logs"
 
 # Create completion script
 cat > "$APP_DIR/complete-setup.sh" << 'COMPLETION_SCRIPT'
@@ -375,9 +405,9 @@ echo "🗄️  PostgreSQL database ready"
 echo "⚙️  PM2 process manager installed"
 echo
 echo "🎯 Next steps:"
-echo "1. Run the completion script: $APP_DIR/complete-setup.sh"
-echo "2. Edit the configuration and add your Telegram bot token"
-echo "3. Start the application: $APP_DIR/start.sh"
+echo "1. Run the completion script: cd $APP_DIR && ./complete-setup.sh"
+echo "2. Edit configuration: nano $APP_DIR/.env (add TELEGRAM_BOT_TOKEN)"
+echo "3. Start application: $APP_DIR/start.sh"
 echo
 echo "🔧 Useful scripts created:"
 echo "   - $APP_DIR/complete-setup.sh (complete installation)"

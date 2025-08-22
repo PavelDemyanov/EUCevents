@@ -14,11 +14,8 @@ chmod +x install-macos-arm.sh
 
 ### 2. Завершить настройку
 ```bash
-# Перейти в директорию приложения
-cd ~/event-management
-
-# Завершить настройку (установить зависимости и настроить базу)
-./complete-setup.sh
+# Перейти в директорию приложения и завершить установку
+cd ~/event-management && ./complete-setup.sh
 ```
 
 ### 3. Настройка Telegram бота
