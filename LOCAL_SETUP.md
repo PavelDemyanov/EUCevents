@@ -60,6 +60,9 @@ psql -U event_user -d event_management -f database_dump.sql
 git clone <ваш-репозиторий>
 cd event-management-system
 npm install
+
+# Установка dotenv (если не установлено автоматически)
+npm install dotenv
 ```
 
 2. **Настройка переменных окружения:**
