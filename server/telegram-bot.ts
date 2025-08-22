@@ -1318,11 +1318,12 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           const activeParticipants = participants.filter(p => p.isActive);
           const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
           const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+          const eboardCount = activeParticipants.filter(p => p.transportType === 'eboard').length;
           const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
           const totalCount = activeParticipants.length;
           
           const stats = totalCount > 0 ? 
-            `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 👀${spectatorCount} (всего: ${totalCount})` : 
+            `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 🛹${eboardCount} 👀${spectatorCount} (всего: ${totalCount})` : 
             `\n📊 Пока никто не зарегистрирован`;
           
           message += `🎯 **${event.name}**\n` +
@@ -1340,9 +1341,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         if (unregisteredEvents.length > 0) {
           message += "🚀 Выберите мероприятие для регистрации:";
           
-          const keyboard = [[
-            { text: "🚀 Начать регистрацию", callback_data: "go_home" }
-          ]];
+          // Create buttons for each available event
+          const keyboard: any[] = [];
+          unregisteredEvents.forEach(event => {
+            keyboard.push([{
+              text: `➕ ${event.name}`,
+              callback_data: `select_event_${event.id}`
+            }]);
+          });
 
           return bot.sendMessage(chatId, message, {
             reply_markup: { inline_keyboard: keyboard },
