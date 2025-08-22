@@ -46,7 +46,7 @@ chown eventapp:eventapp $APP_DIR
 # Get application files
 echo "Please place your application files in: $APP_DIR"
 echo "Or clone from repository:"
-echo "sudo -u eventapp git clone <repository-url> $APP_DIR"
+echo "sudo -u eventapp git clone https://github.com/PavelDemyanov/EUCevents.git $APP_DIR"
 echo
 
 # Create database and user

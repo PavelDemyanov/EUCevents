@@ -29,7 +29,7 @@
 **Вариант A: Из Git репозитория**
 ```bash
 cd ~/event-management
-git clone https://github.com/username/repo.git temp
+git clone https://github.com/PavelDemyanov/EUCevents.git temp
 mv temp/* .
 mv temp/.* . 2>/dev/null || true
 rm -rf temp

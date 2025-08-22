@@ -178,7 +178,7 @@ if [ ! -f "package.json" ]; then
     echo "📋 You need to place the application files in this directory first:"
     echo "   1. Download the application files"
     echo "   2. Extract them to: $APP_DIR"
-    echo "   3. Or clone from git: git clone <repository-url> ."
+    echo "   3. Or clone from git: git clone https://github.com/PavelDemyanov/EUCevents.git ."
     echo ""
     echo "🔗 Expected files:"
     echo "   - package.json"
