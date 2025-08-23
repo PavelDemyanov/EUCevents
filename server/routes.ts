@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import session from "express-session";
-import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertFixedNumberBindingSchema, adminLoginSchema } from "@shared/schema";
+import { insertEventSchema, insertBotSchema, insertReservedNumberSchema, insertFixedNumberBindingSchema, insertSystemSettingSchema, adminLoginSchema } from "@shared/schema";
 import { setupManager } from "./setup";
 // Import Telegram bot and PDF generator only if files exist
 let startTelegramBot: any = null;
@@ -918,6 +918,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting admin:", error);
       res.status(500).json({ message: "Не удалось удалить администратора" });
+    }
+  });
+
+  // System Settings API
+  app.get('/api/settings', requireAuth, async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching system settings:", error);
+      res.status(500).json({ message: "Не удалось загрузить настройки системы" });
+    }
+  });
+
+  app.get('/api/settings/:key', requireAuth, async (req, res) => {
+    try {
+      const setting = await storage.getSystemSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Настройка не найдена" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching system setting:", error);
+      res.status(500).json({ message: "Не удалось загрузить настройку" });
+    }
+  });
+
+  app.post('/api/settings', requireAuth, async (req, res) => {
+    try {
+      const { key, value, description } = insertSystemSettingSchema.parse(req.body);
+      const setting = await storage.setSystemSetting(key, value, description);
+      res.status(201).json(setting);
+    } catch (error: any) {
+      console.error("Error creating system setting:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Неверные данные", errors: error.errors });
+      }
+      res.status(500).json({ message: "Не удалось создать настройку" });
+    }
+  });
+
+  app.put('/api/settings/:id', requireAuth, async (req, res) => {
+    try {
+      const settingId = parseInt(req.params.id);
+      const updateData = insertSystemSettingSchema.partial().parse(req.body);
+      const setting = await storage.updateSystemSetting(settingId, updateData);
+      res.json(setting);
+    } catch (error: any) {
+      console.error("Error updating system setting:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Неверные данные", errors: error.errors });
+      }
+      res.status(500).json({ message: "Не удалось обновить настройку" });
+    }
+  });
+
+  app.delete('/api/settings/:id', requireAuth, async (req, res) => {
+    try {
+      const settingId = parseInt(req.params.id);
+      await storage.deleteSystemSetting(settingId);
+      res.json({ message: "Настройка удалена" });
+    } catch (error) {
+      console.error("Error deleting system setting:", error);
+      res.status(500).json({ message: "Не удалось удалить настройку" });
     }
   });
 

@@ -106,6 +106,15 @@ export const fixedNumberBindings = pgTable("fixed_number_bindings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// System settings table for global application settings
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one }) => ({
   event: one(events, {
@@ -151,6 +160,8 @@ export const reservedNumbersRelations = relations(reservedNumbers, ({ one }) => 
 }));
 
 export const fixedNumberBindingsRelations = relations(fixedNumberBindings, ({ }) => ({}));
+
+export const systemSettingsRelations = relations(systemSettings, ({ }) => ({}));
 
 // Schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
@@ -218,6 +229,12 @@ export const insertFixedNumberBindingSchema = createInsertSchema(fixedNumberBind
   participantNumber: z.number().min(1, "Номер участника должен быть больше 0"),
 }).omit({ id: true, createdAt: true });
 
+export const insertSystemSettingSchema = createInsertSchema(systemSettings, {
+  key: z.string().min(1, "Ключ настройки обязателен"),
+  value: z.string().min(0, "Значение настройки обязательно"),
+  description: z.string().optional(),
+}).omit({ id: true, updatedAt: true });
+
 export const adminLoginSchema = z.object({
   username: z.string().min(2, "Логин обязателен"),
   password: z.string().min(4, "Пароль должен содержать минимум 4 символа"),
@@ -238,6 +255,8 @@ export type ReservedNumber = typeof reservedNumbers.$inferSelect;
 export type InsertReservedNumber = z.infer<typeof insertReservedNumberSchema>;
 export type FixedNumberBinding = typeof fixedNumberBindings.$inferSelect;
 export type InsertFixedNumberBinding = z.infer<typeof insertFixedNumberBindingSchema>;
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = z.infer<typeof insertSystemSettingSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
 export type InsertAdminUser = typeof adminUsers.$inferInsert;
 export type AdminLogin = z.infer<typeof adminLoginSchema>;

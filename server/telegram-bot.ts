@@ -1,6 +1,18 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { IStorage } from './storage';
 import { InsertUser } from '@shared/schema';
+import memoize from 'memoizee';
+
+// Get telegram separator from settings with cache
+const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> => {
+  try {
+    const setting = await storage.getSystemSetting('telegram_message_separator');
+    return setting?.value || '➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖'; // Default fallback
+  } catch (error) {
+    console.error('Failed to get telegram separator setting:', error);
+    return '➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖'; // Default fallback
+  }
+}, { maxAge: 60000 }); // Cache for 1 minute
 
 interface UserRegistrationState {
   step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data' | 
@@ -266,7 +278,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
 
         if (unregisteredEvents.length > 0) {
-          statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
+          const separator = await getTelegramSeparator(storage);
+          statusMessage += `\n${separator}\n`;
           statusMessage += "📝 Доступны для регистрации:\n";
           unregisteredEvents.forEach(event => {
             statusMessage += `• ${event.name} (${formatDateTime(event.datetime)})\n`;
@@ -1034,7 +1047,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             );
 
             if (unregisteredEvents.length > 0) {
-              statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
+              const separator = await getTelegramSeparator(storage);
+          statusMessage += `\n${separator}\n`;
               statusMessage += "📝 Доступны для регистрации:\n\n";
               for (const event of unregisteredEvents) {
                 // Get transport statistics for this event
@@ -1432,7 +1446,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           console.log(`=== CONDITION CHECK === unregisteredEvents.length > 0: ${unregisteredEvents.length > 0}`);
           if (unregisteredEvents.length > 0) {
             console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
-            statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
+            const separator = await getTelegramSeparator(storage);
+          statusMessage += `\n${separator}\n`;
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${event.name}**\n` +
@@ -1661,7 +1676,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           console.log(`=== CONDITION CHECK === unregisteredEvents.length > 0: ${unregisteredEvents.length > 0}`);
           if (unregisteredEvents.length > 0) {
             console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
-            statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
+            const separator = await getTelegramSeparator(storage);
+          statusMessage += `\n${separator}\n`;
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${event.name}**\n` +

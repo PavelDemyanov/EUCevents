@@ -7,6 +7,7 @@ import {
   reservedNumbers,
   fixedNumberBindings,
   adminUsers,
+  systemSettings,
   type User,
   type InsertUser,
   type Event,
@@ -23,6 +24,8 @@ import {
   type InsertFixedNumberBinding,
   type AdminUser,
   type InsertAdminUser,
+  type SystemSetting,
+  type InsertSystemSetting,
   type EventWithStats,
   type UserWithEvent,
 } from "@shared/schema";
@@ -108,6 +111,13 @@ export interface IStorage {
   // Telegram nicknames operations
   getExistingTelegramNicknames(): Promise<string[]>;
   getUsersByTelegramNickname(telegramNickname: string): Promise<User[]>;
+
+  // System settings operations
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  getSystemSettings(): Promise<SystemSetting[]>;
+  setSystemSetting(key: string, value: string, description?: string): Promise<SystemSetting>;
+  updateSystemSetting(id: number, updates: Partial<InsertSystemSetting>): Promise<SystemSetting>;
+  deleteSystemSetting(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -940,6 +950,58 @@ export class DatabaseStorage implements IStorage {
     }
 
     return nextNumber;
+  }
+
+  // System settings operations
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.key, key));
+    return setting;
+  }
+
+  async getSystemSettings(): Promise<SystemSetting[]> {
+    return await db
+      .select()
+      .from(systemSettings)
+      .orderBy(systemSettings.key);
+  }
+
+  async setSystemSetting(key: string, value: string, description?: string): Promise<SystemSetting> {
+    const existing = await this.getSystemSetting(key);
+    
+    if (existing) {
+      // Update existing setting
+      const [updated] = await db
+        .update(systemSettings)
+        .set({ value, description, updatedAt: new Date() })
+        .where(eq(systemSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new setting
+      const [created] = await db
+        .insert(systemSettings)
+        .values({ key, value, description })
+        .returning();
+      return created;
+    }
+  }
+
+  async updateSystemSetting(id: number, updates: Partial<InsertSystemSetting>): Promise<SystemSetting> {
+    const [updated] = await db
+      .update(systemSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(systemSettings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSystemSetting(id: number): Promise<void> {
+    await db
+      .delete(systemSettings)
+      .where(eq(systemSettings.id, id));
   }
 }
 

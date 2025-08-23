@@ -5,6 +5,25 @@ dotenv.config();
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+
+// Initialize default system settings
+async function initializeDefaultSettings() {
+  try {
+    // Initialize telegram separator if not exists
+    const separatorSetting = await storage.getSystemSetting('telegram_message_separator');
+    if (!separatorSetting) {
+      await storage.setSystemSetting(
+        'telegram_message_separator', 
+        '➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖',
+        'Разделитель между секциями в сообщениях Telegram бота'
+      );
+      console.log('✅ Initialized default Telegram message separator setting');
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize default settings:', error);
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -41,6 +60,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize default settings before starting the server
+  await initializeDefaultSettings();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

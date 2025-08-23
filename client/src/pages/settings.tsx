@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, Bot as BotIcon, MessageCircle, Hash, Users, UserPlus } from "lucide-react";
-import type { Bot, Chat, FixedNumberBinding, InsertFixedNumberBinding, AdminUser, InsertAdminUserWithValidation } from "@shared/schema";
+import type { Bot, Chat, FixedNumberBinding, InsertFixedNumberBinding, AdminUser, InsertAdminUserWithValidation, SystemSetting } from "@shared/schema";
 import { insertAdminUserSchema } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,6 +31,7 @@ export default function Settings() {
   const [editingBot, setEditingBot] = useState<Bot | null>(null);
   const [editingChat, setEditingChat] = useState<Chat | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [telegramSeparator, setTelegramSeparator] = useState("");
   const [newBot, setNewBot] = useState({
     token: "",
     name: "",
@@ -73,6 +74,19 @@ export default function Settings() {
   const { data: usersForBinding = [], isLoading: usersLoading } = useQuery({
     queryKey: ["/api/users-for-binding"],
   });
+
+  // System Settings query
+  const { data: systemSettings = [], isLoading: settingsLoading } = useQuery<SystemSetting[]>({
+    queryKey: ["/api/settings"],
+  });
+
+  // Initialize telegram separator from settings
+  useEffect(() => {
+    const separatorSetting = systemSettings.find(s => s.key === 'telegram_message_separator');
+    if (separatorSetting) {
+      setTelegramSeparator(separatorSetting.value);
+    }
+  }, [systemSettings]);
 
   const { data: admins = [], isLoading: adminsLoading } = useQuery({
     queryKey: ["/api/admins"],
@@ -353,6 +367,42 @@ export default function Settings() {
     if (confirm("Вы уверены, что хотите удалить этого администратора?")) {
       deleteAdminMutation.mutate(adminId);
     }
+  };
+
+  // System Settings mutation
+  const updateSeparatorMutation = useMutation({
+    mutationFn: async (separator: string) => {
+      const separatorSetting = systemSettings.find(s => s.key === 'telegram_message_separator');
+      if (separatorSetting) {
+        await apiRequest(`/api/settings/${separatorSetting.id}`, {
+          method: "PUT",
+          body: { key: 'telegram_message_separator', value: separator, description: 'Разделитель между секциями в сообщениях Telegram бота' }
+        });
+      } else {
+        await apiRequest("/api/settings", {
+          method: "POST",
+          body: { key: 'telegram_message_separator', value: separator, description: 'Разделитель между секциями в сообщениях Telegram бота' }
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Успешно",
+        description: "Разделитель сообщений обновлён",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить разделитель",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveSeparator = () => {
+    updateSeparatorMutation.mutate(telegramSeparator);
   };
 
   if (botsLoading || chatsLoading) {
@@ -819,6 +869,44 @@ export default function Settings() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* System Settings Section */}
+      <Card>
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex items-center space-x-2">
+            <Hash className="h-5 w-5" />
+            <CardTitle className="text-lg md:text-xl">Настройки системы</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="telegram-separator">Разделитель в Telegram-сообщениях</Label>
+              <div className="mt-2 flex gap-3">
+                <Input
+                  id="telegram-separator"
+                  type="text"
+                  placeholder="➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖"
+                  value={telegramSeparator}
+                  onChange={(e) => setTelegramSeparator(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-telegram-separator"
+                />
+                <Button 
+                  onClick={handleSaveSeparator} 
+                  disabled={updateSeparatorMutation.isPending || settingsLoading}
+                  data-testid="button-save-separator"
+                >
+                  {updateSeparatorMutation.isPending ? "Сохранение..." : "Сохранить"}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Разделитель между секциями "Ваши регистрации" и "Доступны для регистрации" в сообщениях бота
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Администраторы */}
       <Card>
