@@ -1541,7 +1541,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     try {
       // Handle confirm_existing_data - if user sends text while in this state, reset and process as new message
       if (state.step === 'confirm_existing_data') {
-        console.log(`User in confirm_existing_data state sent text: "${text}", resetting state and processing as new message`);
+        console.log(`=== HANDLING confirm_existing_data === User ${telegramId} sent text: "${text}", resetting state and processing as new message`);
         userStates.delete(telegramId);
         
         // Process as new message by calling the same logic as "no state"
