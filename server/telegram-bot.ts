@@ -23,6 +23,49 @@ const userStates = new Map<string, UserRegistrationState>();
 // Global bot instance to prevent multiple polling
 let activeBotInstance: TelegramBot | null = null;
 
+// Function to check if user is a member of a specific chat
+async function isUserChatMember(bot: TelegramBot, chatId: string, userId: string): Promise<boolean> {
+  try {
+    const member = await bot.getChatMember(chatId, parseInt(userId));
+    // User is a member if they are not left, kicked, or banned
+    return member.status !== 'left' && member.status !== 'kicked';
+  } catch (error) {
+    console.log(`Error checking membership for user ${userId} in chat ${chatId}:`, error);
+    return false;
+  }
+}
+
+// Function to filter events based on user's chat membership
+async function filterEventsByUserMembership(bot: TelegramBot, events: any[], userId: string, storage: IStorage): Promise<any[]> {
+  const filteredEvents: any[] = [];
+  
+  for (const event of events) {
+    // Get all chats associated with this event
+    const eventChats = await storage.getEventChats(event.id);
+    
+    if (eventChats.length === 0) {
+      // If no chats associated, skip this event
+      continue;
+    }
+    
+    // Check if user is a member of at least one of the event's chats
+    let isMemberOfAnyChat = false;
+    for (const chatRecord of eventChats) {
+      const isMember = await isUserChatMember(bot, chatRecord.chatId, userId);
+      if (isMember) {
+        isMemberOfAnyChat = true;
+        break;
+      }
+    }
+    
+    if (isMemberOfAnyChat) {
+      filteredEvents.push(event);
+    }
+  }
+  
+  return filteredEvents;
+}
+
 
 
 export async function startTelegramBot(token: string, storage: IStorage) {
@@ -176,17 +219,21 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     try {
       // Get all active events and user registrations
       const activeEvents = await storage.getActiveEvents();
-      if (activeEvents.length === 0) {
+      
+      // Filter events by user's chat membership
+      const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
+      
+      if (accessibleEvents.length === 0) {
         return bot.sendMessage(
           chatId,
-          "В данный момент нет активных мероприятий для регистрации."
+          "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
         );
       }
 
-      // Check user's registrations for all active events
+      // Check user's registrations for all accessible events
       const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
       const activeRegistrations = existingRegistrations.filter(reg => 
-        reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+        reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
       );
 
       if (activeRegistrations.length > 0) {
@@ -208,7 +255,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
 
         // Check if there are events user is not registered for
-        const unregisteredEvents = activeEvents.filter(event => 
+        const unregisteredEvents = accessibleEvents.filter(event => 
           !activeRegistrations.some(reg => reg.eventId === event.id)
         );
 
@@ -232,7 +279,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Add management buttons for existing registrations
         activeRegistrations.forEach(registration => {
-          const event = activeEvents.find(e => e.id === registration.eventId);
+          const event = accessibleEvents.find(e => e.id === registration.eventId);
           keyboard.push([{
             text: `⚙️ Управление "${event?.name}"`,
             callback_data: `manage_event_${registration.eventId}`
@@ -253,7 +300,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         telegramNickname,
       });
 
-      if (activeEvents.length === 1) {
+      if (accessibleEvents.length === 1) {
         // Auto-select single event, but check for existing data first
         const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
         
@@ -263,7 +310,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           
           userStates.set(telegramId, {
             step: 'confirm_existing_data',
-            eventId: activeEvents[0].id,
+            eventId: accessibleEvents[0].id,
             telegramNickname,
             existingData: {
               fullName: lastRegistration.fullName,
@@ -281,10 +328,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return bot.sendMessage(
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
-            `📅 ${activeEvents[0].name}\n` +
-            (activeEvents[0].description ? `📝 ${activeEvents[0].description}\n` : '') +
-            `📍 ${activeEvents[0].location}\n` +
-            `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
+            `📅 ${accessibleEvents[0].name}\n` +
+            (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+            `📍 ${accessibleEvents[0].location}\n` +
+            `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
             `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
@@ -306,23 +353,23 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         // No existing data - proceed with normal registration
         userStates.set(telegramId, {
           step: 'full_name',
-          eventId: activeEvents[0].id,
+          eventId: accessibleEvents[0].id,
           telegramNickname,
         });
 
         return bot.sendMessage(
           chatId,
           `Добро пожаловать на регистрацию мероприятия!\n\n` +
-          `📅 ${activeEvents[0].name}\n` +
-          (activeEvents[0].description ? `📝 ${activeEvents[0].description}\n` : '') +
-          `📍 ${activeEvents[0].location}\n` +
-          `🕐 ${formatDateTime(activeEvents[0].datetime)}\n\n` +
+          `📅 ${accessibleEvents[0].name}\n` +
+          (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+          `📍 ${accessibleEvents[0].location}\n` +
+          `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
           `Для регистрации мне потребуется несколько данных.\n` +
           `Пожалуйста, введите ваши ФИО:`
         );
       } else {
         // Multiple events - show selection
-        const keyboard = activeEvents.map(event => [{
+        const keyboard = accessibleEvents.map(event => [{
           text: `${event.name} - ${formatDateTime(event.datetime)}`,
           callback_data: `select_event_${event.id}`,
         }]);
@@ -925,17 +972,21 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         try {
           // Get all active events and user registrations
           const activeEvents = await storage.getActiveEvents();
-          if (activeEvents.length === 0) {
+          
+          // Filter events by user's chat membership
+          const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
+          
+          if (accessibleEvents.length === 0) {
             return bot.sendMessage(
               chatId,
-              "🏠 Главное меню\n\nВ данный момент нет активных мероприятий для регистрации."
+              "🏠 Главное меню\n\nВ данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
             );
           }
 
-          // Check user's registrations for all active events
+          // Check user's registrations for all accessible events
           const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
           const activeRegistrations = existingRegistrations.filter(reg => 
-            reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+            reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
           );
 
           if (activeRegistrations.length > 0) {
@@ -957,7 +1008,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             }
 
             // Check if there are events user is not registered for
-            const unregisteredEvents = activeEvents.filter(event => 
+            const unregisteredEvents = accessibleEvents.filter(event => 
               !activeRegistrations.some(reg => reg.eventId === event.id)
             );
 
@@ -1286,10 +1337,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       try {
         const activeEvents = await storage.getActiveEvents();
         
-        if (activeEvents.length === 0) {
+        // Filter events by user's chat membership
+        const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
+        
+        if (accessibleEvents.length === 0) {
           return bot.sendMessage(
             chatId,
-            "👋 Привет! В данный момент нет активных мероприятий для регистрации.",
+            "👋 Привет! В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп.",
             {
               reply_markup: {
                 inline_keyboard: [[
@@ -1303,13 +1357,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         // Check user's existing registrations
         const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
         const activeRegistrations = existingRegistrations.filter(reg => 
-          reg.isActive && activeEvents.some(event => event.id === reg.eventId)
+          reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
         );
 
-        let message = "👋 Привет! Вот актуальные мероприятия:\n\n";
+        let message = "👋 Привет! Вот доступные вам мероприятия:\n\n";
 
-        // Show all active events
-        for (const event of activeEvents) {
+        // Show all accessible events
+        for (const event of accessibleEvents) {
           const isRegistered = activeRegistrations.some(reg => reg.eventId === event.id);
           const status = isRegistered ? "✅ Вы зарегистрированы" : "📝 Доступно для регистрации";
           
@@ -1334,7 +1388,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
 
         // Check if there are events user can register for
-        const unregisteredEvents = activeEvents.filter(event => 
+        const unregisteredEvents = accessibleEvents.filter(event => 
           !activeRegistrations.some(reg => reg.eventId === event.id)
         );
 
