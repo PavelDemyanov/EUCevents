@@ -1454,7 +1454,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             ...unregisteredEvents
           ].filter(Boolean);
           
-          const shouldDisablePreviews = allEventsForMessage.some(event => event.disableLinkPreviews === true);
+          const shouldDisablePreviews = allEventsForMessage.every(event => event.disableLinkPreviews === true);
           
           console.log(`=== STATUS MESSAGE SEND === shouldDisablePreviews: ${shouldDisablePreviews}`);
           allEventsForMessage.forEach(event => {
@@ -1673,7 +1673,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             ...unregisteredEvents
           ].filter(Boolean);
           
-          const shouldDisablePreviews = allEventsForMessage.some(event => event.disableLinkPreviews === true);
+          const shouldDisablePreviews = allEventsForMessage.every(event => event.disableLinkPreviews === true);
           
           console.log(`=== STATUS MESSAGE SEND === shouldDisablePreviews: ${shouldDisablePreviews}`);
           allEventsForMessage.forEach(event => {
