@@ -1564,7 +1564,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
         }
       } catch (error) {
-        console.error('Telegram bot error:', error);
+        console.error('=== TELEGRAM BOT ERROR ===', error);
+        console.error('=== ERROR DETAILS ===', {
+          message: error.message,
+          stack: error.stack,
+          telegramId: telegramId,
+          chatId: chatId
+        });
         bot.sendMessage(chatId, "Произошла ошибка. Попробуйте позже.");
       }
       return;
