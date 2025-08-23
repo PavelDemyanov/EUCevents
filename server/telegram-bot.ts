@@ -1369,6 +1369,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       console.log(`=== NICKNAME DEBUG === telegramNickname:`, telegramNickname);
       
       console.log(`=== ENTERING TRY BLOCK === User ${telegramId}, telegramNickname: ${telegramNickname}`);
+      console.log(`=== FUNCTION IDENTIFIER === This is the MAIN handlePrivateMessage function`);
       
       try {
         // Get all active events and user registrations
@@ -1398,7 +1399,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         console.log(`=== ACTIVE REGISTRATIONS === User ${telegramId} has ${activeRegistrations.length} active registrations`);
 
         if (activeRegistrations.length > 0) {
-          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch`);
+          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch - UNIQUE_BLOCK_${Math.random()}`);
           // User has active registrations, show status and options
           let statusMessage = "📋 Ваши текущие регистрации:\n\n";
           
@@ -1627,7 +1628,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         console.log(`=== ACTIVE REGISTRATIONS === User ${telegramId} has ${activeRegistrations.length} active registrations`);
 
         if (activeRegistrations.length > 0) {
-          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch`);
+          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch - UNIQUE_BLOCK_${Math.random()}`);
           // User has active registrations, show status and options
           let statusMessage = "📋 Ваши текущие регистрации:\n\n";
           
