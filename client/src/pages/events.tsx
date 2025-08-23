@@ -130,11 +130,6 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       
-      // Close any open dialogs to refresh the UI
-      setShowCreateDialog(false);
-      setShowEditDialog(false);
-      setEditingEvent(null);
-      
       toast({
         title: "Успешно",
         description: "Настройки превью ссылок обновлены для всех мероприятий",
