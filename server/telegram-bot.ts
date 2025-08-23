@@ -1335,7 +1335,6 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
   // Handle text messages
   bot.on('message', async (msg) => {
-    console.log(`=== RECEIVED MESSAGE === from user ${msg.from?.id} in chat ${msg.chat.id}: "${msg.text}"`);
     
     if (msg.text?.startsWith('/')) return; // Skip commands
 
@@ -1540,6 +1539,146 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     }
 
     try {
+      // Handle confirm_existing_data - if user sends text while in this state, reset and process as new message
+      if (state.step === 'confirm_existing_data') {
+        console.log(`User in confirm_existing_data state sent text: "${text}", resetting state and processing as new message`);
+        userStates.delete(telegramId);
+        
+        // Process as new message by calling the same logic as "no state"
+        const telegramNickname = msg.from?.username;
+        
+        // Get all active events and user registrations
+        const activeEvents = await storage.getActiveEvents();
+        
+        // Filter events by user's chat membership
+        const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
+        
+        if (accessibleEvents.length === 0) {
+          return bot.sendMessage(
+            chatId,
+            "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
+          );
+        }
+
+        // Check user's registrations for all accessible events
+        const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        const activeRegistrations = existingRegistrations.filter(reg => 
+          reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
+        );
+
+        if (activeRegistrations.length > 0) {
+          // User has active registrations, show status and options
+          let statusMessage = "📋 Ваши текущие регистрации:\n\n";
+          
+          for (const registration of activeRegistrations) {
+            const event = await storage.getEvent(registration.eventId);
+            const transportInfo = registration.transportModel 
+              ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
+              : getTransportTypeLabel(registration.transportType);
+            
+            statusMessage += `🎯 **${event?.name}**\n` +
+              (event?.description ? `📝 ${event.description}\n` : '') +
+              `📍 ${event?.location}\n` +
+              `🕐 ${formatDateTime(event?.datetime!)}\n` +
+              `🚗 Транспорт: ${transportInfo}\n` +
+              `🏷️ Номер: ${registration.participantNumber}\n\n`;
+          }
+
+          // Check if there are events user is not registered for
+          const unregisteredEvents = accessibleEvents.filter(event => 
+            !activeRegistrations.some(reg => reg.eventId === event.id)
+          );
+          
+          if (unregisteredEvents.length > 0) {
+            statusMessage += "📝 Доступны для регистрации:\n\n";
+            for (const event of unregisteredEvents) {
+              statusMessage += `🎯 **${event.name}**\n` +
+                (event.description ? `📝 ${event.description}\n` : '') +
+                `📍 ${event.location}\n` +
+                `🕐 ${formatDateTime(event.datetime)}\n\n`;
+            }
+          }
+
+          const keyboard: any[] = [];
+          
+          // Add buttons for events user can register for
+          unregisteredEvents.forEach(event => {
+            keyboard.push([{
+              text: `➕ Регистрация на "${event.name}"`,
+              callback_data: `select_event_${event.id}`
+            }]);
+          });
+
+          // Add management buttons for existing registrations
+          activeRegistrations.forEach(registration => {
+            const event = accessibleEvents.find(e => e.id === registration.eventId);
+            keyboard.push([{
+              text: `⚙️ Управление "${event?.name}"`,
+              callback_data: `manage_event_${registration.eventId}`
+            }]);
+          });
+
+          return bot.sendMessage(chatId, statusMessage, {
+            reply_markup: { inline_keyboard: keyboard },
+            parse_mode: 'Markdown'
+          });
+        }
+
+        // Continue with single event logic...
+        if (accessibleEvents.length === 1) {
+          // Auto-select single event, but check for existing data first
+          const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+          
+          if (existingRegistrations.length > 0) {
+            // Show existing user data for confirmation
+            const lastRegistration = existingRegistrations[existingRegistrations.length - 1];
+            
+            userStates.set(telegramId, {
+              step: 'confirm_existing_data',
+              eventId: accessibleEvents[0].id,
+              telegramNickname,
+              existingData: {
+                fullName: lastRegistration.fullName,
+                phone: lastRegistration.phone,
+                transportType: lastRegistration.transportType as 'monowheel' | 'scooter' | 'spectator' | undefined,
+                transportModel: lastRegistration.transportModel || undefined,
+              }
+            });
+
+            let transportInfo = '';
+            if (lastRegistration.transportType && lastRegistration.transportType !== 'spectator') {
+              transportInfo = `🚗 Транспорт: ${getTransportTypeLabel(lastRegistration.transportType)}${lastRegistration.transportModel ? ` (${lastRegistration.transportModel})` : ''}\n`;
+            }
+
+            return bot.sendMessage(
+              chatId,
+              `Добро пожаловать на регистрацию мероприятия!\n\n` +
+              `📅 ${accessibleEvents[0].name}\n` +
+              (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+              `📍 ${accessibleEvents[0].location}\n` +
+              `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
+              `📋 Найдены ваши данные из предыдущих регистраций:\n` +
+              `👤 ФИО: ${lastRegistration.fullName}\n` +
+              `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
+              transportInfo + 
+              `\nИспользовать эти данные для регистрации?`,
+              {
+                reply_markup: {
+                  inline_keyboard: [
+                    [
+                      { text: "✅ Да, использовать", callback_data: "use_existing_data" },
+                      { text: "✏️ Изменить данные", callback_data: "change_data" }
+                    ]
+                  ]
+                },
+                disable_web_page_preview: accessibleEvents[0].disableLinkPreviews
+              }
+            );
+          }
+        }
+        return;
+      }
+
       // Handle editing existing data FIRST (before general steps)
       if (state.step === 'edit_full_name') {
         if (text.length < 2) {
