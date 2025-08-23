@@ -1361,7 +1361,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     // If no state, handle as random message - use same logic as /start command
     if (!state) {
       console.log(`No state found for user ${telegramId}, using /start command logic`);
+      console.log(`=== MSG DEBUG === msg object:`, JSON.stringify(msg, null, 2));
+      console.log(`=== MSG.FROM DEBUG === msg.from:`, msg.from);
       const telegramNickname = msg.from?.username;
+      console.log(`=== NICKNAME DEBUG === telegramNickname:`, telegramNickname);
       
       console.log(`=== ENTERING TRY BLOCK === User ${telegramId}, telegramNickname: ${telegramNickname}`);
       
