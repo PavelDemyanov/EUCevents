@@ -1335,6 +1335,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
   // Handle text messages
   bot.on('message', async (msg) => {
+    console.log(`=== RECEIVED MESSAGE === from user ${msg.from?.id} in chat ${msg.chat.id}: "${msg.text}"`);
+    
     if (msg.text?.startsWith('/')) return; // Skip commands
 
     const chatId = msg.chat.id.toString();
