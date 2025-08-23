@@ -1422,10 +1422,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
           
           console.log(`=== UNREGISTERED EVENTS === User ${telegramId} has ${unregisteredEvents.length} unregistered events`);
+          console.log(`=== ACCESSIBLE EVENTS FOR CHECK === ${accessibleEvents.map(e => `${e.id}-${e.name}`).join(', ')}`);
+          console.log(`=== ACTIVE REGISTRATIONS FOR CHECK === ${activeRegistrations.map(r => `${r.eventId}`).join(', ')}`);
           unregisteredEvents.forEach(event => {
             console.log(`=== UNREGISTERED EVENT === ${event.id} - ${event.name}`);
           });
           
+          console.log(`=== CONDITION CHECK === unregisteredEvents.length > 0: ${unregisteredEvents.length > 0}`);
           if (unregisteredEvents.length > 0) {
             console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
             statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
@@ -1648,10 +1651,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
           
           console.log(`=== UNREGISTERED EVENTS === User ${telegramId} has ${unregisteredEvents.length} unregistered events`);
+          console.log(`=== ACCESSIBLE EVENTS FOR CHECK === ${accessibleEvents.map(e => `${e.id}-${e.name}`).join(', ')}`);
+          console.log(`=== ACTIVE REGISTRATIONS FOR CHECK === ${activeRegistrations.map(r => `${r.eventId}`).join(', ')}`);
           unregisteredEvents.forEach(event => {
             console.log(`=== UNREGISTERED EVENT === ${event.id} - ${event.name}`);
           });
           
+          console.log(`=== CONDITION CHECK === unregisteredEvents.length > 0: ${unregisteredEvents.length > 0}`);
           if (unregisteredEvents.length > 0) {
             console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
             statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
