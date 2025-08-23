@@ -3,7 +3,7 @@ import { IStorage } from './storage';
 import { InsertUser } from '@shared/schema';
 import memoize from 'memoizee';
 
-// Get telegram separator from settings with cache
+// Get telegram separator from settings with short cache
 const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> => {
   try {
     const setting = await storage.getSystemSetting('telegram_message_separator');
@@ -12,7 +12,7 @@ const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> 
     console.error('Failed to get telegram separator setting:', error);
     return '➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖'; // Default fallback
   }
-}, { maxAge: 60000 }); // Cache for 1 minute
+}, { maxAge: 5000 }); // Cache for 5 seconds only
 
 interface UserRegistrationState {
   step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data' | 
