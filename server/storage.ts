@@ -269,6 +269,7 @@ export class DatabaseStorage implements IStorage {
         location: events.location,
         datetime: events.datetime,
         allowedTransportTypes: events.allowedTransportTypes,
+        disableLinkPreviews: events.disableLinkPreviews,
         shareCode: events.shareCode,
         isActive: events.isActive,
         createdAt: events.createdAt,
