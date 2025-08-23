@@ -1363,6 +1363,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       console.log(`No state found for user ${telegramId}, using /start command logic`);
       const telegramNickname = msg.from?.username;
       
+      console.log(`=== ENTERING TRY BLOCK === User ${telegramId}, telegramNickname: ${telegramNickname}`);
+      
       try {
         // Get all active events and user registrations
         console.log(`=== STEP 1 === Getting active events for user ${telegramId}`);
@@ -1566,8 +1568,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       } catch (error) {
         console.error('=== TELEGRAM BOT ERROR ===', error);
         console.error('=== ERROR DETAILS ===', {
-          message: error.message,
-          stack: error.stack,
+          message: (error as Error).message,
+          stack: (error as Error).stack,
           telegramId: telegramId,
           chatId: chatId
         });
