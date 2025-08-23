@@ -335,6 +335,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             transportInfo = `🚗 Транспорт: ${getTransportTypeLabel(lastRegistration.transportType)}${lastRegistration.transportModel ? ` (${lastRegistration.transportModel})` : ''}\n`;
           }
 
+          console.log(`=== SENDING MESSAGE WITH disable_web_page_preview === ${accessibleEvents[0].disableLinkPreviews} for event ${accessibleEvents[0].id}`);
           return bot.sendMessage(
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
