@@ -1342,15 +1342,21 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     const telegramId = msg.from?.id.toString();
     const text = msg.text;
 
-    console.log(`Received message: "${text}" from user ${telegramId} in chat type: ${msg.chat.type}`);
+    console.log(`=== MESSAGE PROCESSING === "${text}" from user ${telegramId} in chat type: ${msg.chat.type}`);
 
-    if (!telegramId || !text) return;
+    if (!telegramId || !text) {
+      console.log(`=== EARLY RETURN === telegramId: ${telegramId}, text: ${text}`);
+      return;
+    }
 
     // Only handle messages in private chats
-    if (msg.chat.type !== 'private') return;
+    if (msg.chat.type !== 'private') {
+      console.log(`=== EARLY RETURN === Not private chat: ${msg.chat.type}`);
+      return;
+    }
 
     const state = userStates.get(telegramId);
-    console.log(`User state for ${telegramId}:`, state);
+    console.log(`=== USER STATE === ${telegramId}:`, state);
     
     // If no state, handle as random message - use same logic as /start command
     if (!state) {
