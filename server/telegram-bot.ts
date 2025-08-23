@@ -1435,9 +1435,23 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             }]);
           });
 
+          // Check if any event has disableLinkPreviews = true
+          const allEventsForMessage = [
+            ...activeRegistrations.map(r => accessibleEvents.find(e => e.id === r.eventId)),
+            ...unregisteredEvents
+          ].filter(Boolean);
+          
+          const shouldDisablePreviews = allEventsForMessage.some(event => event.disableLinkPreviews === true);
+          
+          console.log(`=== STATUS MESSAGE SEND === shouldDisablePreviews: ${shouldDisablePreviews}`);
+          allEventsForMessage.forEach(event => {
+            console.log(`=== EVENT IN MESSAGE === Event ${event.id} (${event.name}): disableLinkPreviews = ${event.disableLinkPreviews}`);
+          });
+
           return bot.sendMessage(chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            parse_mode: 'Markdown'
+            parse_mode: 'Markdown',
+            disable_web_page_preview: shouldDisablePreviews
           });
         }
 
@@ -1626,9 +1640,23 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             }]);
           });
 
+          // Check if any event has disableLinkPreviews = true
+          const allEventsForMessage = [
+            ...activeRegistrations.map(r => accessibleEvents.find(e => e.id === r.eventId)),
+            ...unregisteredEvents
+          ].filter(Boolean);
+          
+          const shouldDisablePreviews = allEventsForMessage.some(event => event.disableLinkPreviews === true);
+          
+          console.log(`=== STATUS MESSAGE SEND === shouldDisablePreviews: ${shouldDisablePreviews}`);
+          allEventsForMessage.forEach(event => {
+            console.log(`=== EVENT IN MESSAGE === Event ${event.id} (${event.name}): disableLinkPreviews = ${event.disableLinkPreviews}`);
+          });
+
           return bot.sendMessage(chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            parse_mode: 'Markdown'
+            parse_mode: 'Markdown',
+            disable_web_page_preview: shouldDisablePreviews
           });
         }
 
