@@ -1420,6 +1420,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
           
           if (unregisteredEvents.length > 0) {
+            statusMessage += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${event.name}**\n` +
@@ -1639,6 +1640,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           );
           
           if (unregisteredEvents.length > 0) {
+            statusMessage += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${event.name}**\n` +
