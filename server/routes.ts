@@ -276,6 +276,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk update link previews for all events
+  app.post("/api/events/bulk-update-link-previews", requireAuth, async (req, res) => {
+    try {
+      const { disableLinkPreviews } = req.body;
+      console.log(`=== BULK UPDATE LINK PREVIEWS === disableLinkPreviews: ${disableLinkPreviews}`);
+      
+      // Get all events
+      const events = await storage.getEvents();
+      console.log(`=== BULK UPDATE === Found ${events.length} events to update`);
+      
+      // Update each event
+      const updatePromises = events.map(event => 
+        storage.updateEvent(event.id, { disableLinkPreviews })
+      );
+      
+      await Promise.all(updatePromises);
+      console.log(`=== BULK UPDATE COMPLETE === Updated ${events.length} events`);
+      
+      res.json({ 
+        success: true, 
+        updatedCount: events.length,
+        message: `Обновлено ${events.length} мероприятий`
+      });
+    } catch (error: any) {
+      console.error("=== BULK UPDATE ERROR ===", error);
+      res.status(500).json({ message: error.message || "Ошибка массового обновления" });
+    }
+  });
+
   // Statistics endpoint
   app.get("/api/stats/today", requireAuth, async (req, res) => {
     try {

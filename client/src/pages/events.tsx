@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,11 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
+  const [showLinkPreviewAlert, setShowLinkPreviewAlert] = useState(false);
+  const [pendingLinkPreviewChange, setPendingLinkPreviewChange] = useState<{
+    newValue: boolean;
+    source: 'create' | 'edit';
+  } | null>(null);
   const [newEvent, setNewEvent] = useState({
     name: "",
     description: "",
@@ -109,6 +115,29 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
       toast({
         title: "Ошибка",
         description: error.message || "Не удалось обновить мероприятие",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateAllEventsLinkPreviewsMutation = useMutation({
+    mutationFn: async (disableLinkPreviews: boolean) => {
+      await apiRequest("/api/events/bulk-update-link-previews", {
+        method: "POST",
+        body: { disableLinkPreviews }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Успешно",
+        description: "Настройки превью ссылок обновлены для всех мероприятий",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка", 
+        description: error.message || "Не удалось обновить настройки превью",
         variant: "destructive",
       });
     },
@@ -206,6 +235,36 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     if (confirm("Вы уверены, что хотите удалить это мероприятие?")) {
       deleteEventMutation.mutate(eventId);
     }
+  };
+
+  const handleLinkPreviewChange = (newValue: boolean, source: 'create' | 'edit') => {
+    setPendingLinkPreviewChange({ newValue, source });
+    setShowLinkPreviewAlert(true);
+  };
+
+  const confirmLinkPreviewChange = () => {
+    if (!pendingLinkPreviewChange) return;
+
+    const { newValue, source } = pendingLinkPreviewChange;
+
+    if (source === 'create') {
+      setNewEvent({ ...newEvent, disableLinkPreviews: !newValue });
+    } else {
+      if (editingEvent) {
+        setEditingEvent({ ...editingEvent, disableLinkPreviews: !newValue });
+      }
+    }
+
+    // Update all events with same setting
+    updateAllEventsLinkPreviewsMutation.mutate(!newValue);
+
+    setShowLinkPreviewAlert(false);
+    setPendingLinkPreviewChange(null);
+  };
+
+  const cancelLinkPreviewChange = () => {
+    setShowLinkPreviewAlert(false);
+    setPendingLinkPreviewChange(null);
   };
 
   const formatDateTime = (date: string) => {
@@ -482,7 +541,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                   id="disable-link-previews"
                   checked={!newEvent.disableLinkPreviews}
                   onCheckedChange={(checked) => {
-                    setNewEvent({ ...newEvent, disableLinkPreviews: !checked });
+                    handleLinkPreviewChange(checked as boolean, 'create');
                   }}
                 />
                 <label htmlFor="disable-link-previews" className="text-sm cursor-pointer">
@@ -665,7 +724,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                     id="edit-disable-link-previews"
                     checked={!editingEvent.disableLinkPreviews}
                     onCheckedChange={(checked) => {
-                      setEditingEvent({ ...editingEvent, disableLinkPreviews: !checked });
+                      handleLinkPreviewChange(checked as boolean, 'edit');
                     }}
                   />
                   <label htmlFor="edit-disable-link-previews" className="text-sm cursor-pointer">
@@ -796,6 +855,32 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Alert Dialog for Link Preview Warning */}
+      <AlertDialog open={showLinkPreviewAlert} onOpenChange={setShowLinkPreviewAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Изменить настройки превью ссылок</AlertDialogTitle>
+            <AlertDialogDescription>
+              Эта настройка влияет на ВСЕ мероприятия в системе. Поскольку все мероприятия показываются в одном сообщении бота, 
+              настройка превью ссылок должна быть одинаковой для всех событий.
+              <br /><br />
+              {pendingLinkPreviewChange?.newValue 
+                ? "Превью ссылок будут ВКЛЮЧЕНЫ для всех мероприятий."
+                : "Превью ссылок будут ОТКЛЮЧЕНЫ для всех мероприятий."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelLinkPreviewChange}>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLinkPreviewChange}>
+              Применить ко всем
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
