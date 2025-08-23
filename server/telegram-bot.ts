@@ -1379,11 +1379,15 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Check user's registrations for all accessible events
         const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        console.log(`=== EXISTING REGISTRATIONS === User ${telegramId} has ${existingRegistrations.length} total registrations`);
+        
         const activeRegistrations = existingRegistrations.filter(reg => 
           reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
         );
+        console.log(`=== ACTIVE REGISTRATIONS === User ${telegramId} has ${activeRegistrations.length} active registrations`);
 
         if (activeRegistrations.length > 0) {
+          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch`);
           // User has active registrations, show status and options
           let statusMessage = "📋 Ваши текущие регистрации:\n\n";
           
@@ -1456,6 +1460,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         }
 
         // If no active registrations, show event selection
+        console.log(`=== BRANCH === Taking no active registrations branch`);
 
         // Initialize registration state
         userStates.set(telegramId, {
@@ -1463,7 +1468,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname,
         });
 
+        console.log(`=== ACCESSIBLE EVENTS === Found ${accessibleEvents.length} events for user ${telegramId}`);
+        
         if (accessibleEvents.length === 1) {
+          console.log(`=== SINGLE EVENT BRANCH === Processing single event: ${accessibleEvents[0].id} - ${accessibleEvents[0].name}`);
           // Auto-select single event, but check for existing data first
           const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
           
@@ -1584,11 +1592,15 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
         // Check user's registrations for all accessible events
         const existingRegistrations = await storage.getUserRegistrationsByTelegramId(telegramId);
+        console.log(`=== EXISTING REGISTRATIONS === User ${telegramId} has ${existingRegistrations.length} total registrations`);
+        
         const activeRegistrations = existingRegistrations.filter(reg => 
           reg.isActive && accessibleEvents.some(event => event.id === reg.eventId)
         );
+        console.log(`=== ACTIVE REGISTRATIONS === User ${telegramId} has ${activeRegistrations.length} active registrations`);
 
         if (activeRegistrations.length > 0) {
+          console.log(`=== BRANCH === Taking activeRegistrations > 0 branch`);
           // User has active registrations, show status and options
           let statusMessage = "📋 Ваши текущие регистрации:\n\n";
           
