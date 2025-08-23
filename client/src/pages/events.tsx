@@ -129,6 +129,12 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      
+      // Close any open dialogs to refresh the UI
+      setShowCreateDialog(false);
+      setShowEditDialog(false);
+      setEditingEvent(null);
+      
       toast({
         title: "Успешно",
         description: "Настройки превью ссылок обновлены для всех мероприятий",
@@ -245,17 +251,10 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const confirmLinkPreviewChange = () => {
     if (!pendingLinkPreviewChange) return;
 
-    const { newValue, source } = pendingLinkPreviewChange;
+    const { newValue } = pendingLinkPreviewChange;
 
-    if (source === 'create') {
-      setNewEvent({ ...newEvent, disableLinkPreviews: !newValue });
-    } else {
-      if (editingEvent) {
-        setEditingEvent({ ...editingEvent, disableLinkPreviews: !newValue });
-      }
-    }
-
-    // Update all events with same setting
+    // Only update all events via bulk API - don't update local state
+    // This prevents conflicts between local updates and bulk updates
     updateAllEventsLinkPreviewsMutation.mutate(!newValue);
 
     setShowLinkPreviewAlert(false);
