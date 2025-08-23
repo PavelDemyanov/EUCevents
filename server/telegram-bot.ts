@@ -190,7 +190,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 `👆 Нажмите сюда ➡️ @${botUsername}\n\n` +
                 `Или отправьте команду /start боту в личку`;
 
-      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      // Determine if link previews should be disabled for this event
+      const shouldDisablePreview = activeEvents.length > 0 && activeEvents.some(event => event.disableLinkPreviews);
+      
+      await bot.sendMessage(chatId, message, { 
+        parse_mode: 'Markdown',
+        disable_web_page_preview: shouldDisablePreview
+      });
       
     } catch (error) {
       console.error('Error handling /event command:', error);
@@ -286,9 +292,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           }]);
         });
 
+        // Check if any accessible event has link previews disabled
+        const shouldDisablePreview = accessibleEvents.some(event => event.disableLinkPreviews);
+        
         return bot.sendMessage(chatId, statusMessage, {
           reply_markup: { inline_keyboard: keyboard },
-          parse_mode: 'Markdown'
+          parse_mode: 'Markdown',
+          disable_web_page_preview: shouldDisablePreview
         });
       }
 
@@ -345,7 +355,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                     { text: "✏️ Изменить данные", callback_data: "change_data" }
                   ]
                 ]
-              }
+              },
+              disable_web_page_preview: accessibleEvents[0].disableLinkPreviews
             }
           );
         }
@@ -365,7 +376,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           `📍 ${accessibleEvents[0].location}\n` +
           `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
           `Для регистрации мне потребуется несколько данных.\n` +
-          `Пожалуйста, введите ваши ФИО:`
+          `Пожалуйста, введите ваши ФИО:`,
+          {
+            disable_web_page_preview: accessibleEvents[0].disableLinkPreviews
+          }
         );
       } else {
         // Multiple events - show selection
@@ -374,13 +388,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           callback_data: `select_event_${event.id}`,
         }]);
 
+        // For multiple events selection - no link previews needed as there's no description
         return bot.sendMessage(
           chatId,
           "Добро пожаловать! Выберите мероприятие для регистрации:",
           {
             reply_markup: {
               inline_keyboard: keyboard,
-            },
+            }
           }
         );
       }
@@ -452,7 +467,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                     { text: "✏️ Изменить данные", callback_data: "change_data" }
                   ]
                 ]
-              }
+              },
+              disable_web_page_preview: event.disableLinkPreviews
             }
           );
         }
@@ -468,7 +484,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           chatId,
           `Вы выбрали: "${event.name}"\n` +
           (event.description ? `📝 ${event.description}\n` : '') +
-          `\nПожалуйста, введите ваши ФИО:`
+          `\nПожалуйста, введите ваши ФИО:`,
+          {
+            disable_web_page_preview: event.disableLinkPreviews
+          }
         );
       }
 
@@ -1467,7 +1486,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                       { text: "✏️ Изменить данные", callback_data: "change_data" }
                     ]
                   ]
-                }
+                },
+                disable_web_page_preview: accessibleEvents[0].disableLinkPreviews
               }
             );
           }
@@ -1487,7 +1507,10 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             `📍 ${accessibleEvents[0].location}\n` +
             `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
             `Для регистрации мне потребуется несколько данных.\n` +
-            `Пожалуйста, введите ваши ФИО:`
+            `Пожалуйста, введите ваши ФИО:`,
+            {
+              disable_web_page_preview: accessibleEvents[0].disableLinkPreviews
+            }
           );
         } else {
           // Multiple events - show selection
@@ -1854,6 +1877,7 @@ export async function sendEventNotificationToGroup(
     scooterCount: number;
     spectatorCount: number;
     totalCount: number;
+    disableLinkPreviews?: boolean;
   },
   botUsername?: string
 ) {
@@ -1870,7 +1894,9 @@ export async function sendEventNotificationToGroup(
     `🤖 Для регистрации напишите ${botUsername ? `@${botUsername}` : 'боту в личные сообщения и отправьте команду /start'}`;
 
   try {
-    await bot.sendMessage(chatId, message);
+    await bot.sendMessage(chatId, message, {
+      disable_web_page_preview: eventData.disableLinkPreviews || false
+    });
     console.log(`Event notification sent to group ${chatId}`);
   } catch (error) {
     console.error(`Failed to send notification to group ${chatId}:`, error);

@@ -604,6 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scooterCount: eventWithStats.scooterCount,
         spectatorCount: eventWithStats.spectatorCount,
         totalCount: eventWithStats.participantCount,
+        disableLinkPreviews: eventWithStats.disableLinkPreviews || false,
         }, botUsername || undefined);
       }
 
