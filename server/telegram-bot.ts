@@ -1365,10 +1365,14 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       
       try {
         // Get all active events and user registrations
+        console.log(`=== STEP 1 === Getting active events for user ${telegramId}`);
         const activeEvents = await storage.getActiveEvents();
+        console.log(`=== STEP 2 === Found ${activeEvents.length} active events`);
         
         // Filter events by user's chat membership
+        console.log(`=== STEP 3 === Filtering events by user membership`);
         const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
+        console.log(`=== STEP 4 === User has access to ${accessibleEvents.length} events`);
         
         if (accessibleEvents.length === 0) {
           return bot.sendMessage(
