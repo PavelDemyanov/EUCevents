@@ -266,6 +266,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
 
         if (unregisteredEvents.length > 0) {
+          statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
           statusMessage += "📝 Доступны для регистрации:\n";
           unregisteredEvents.forEach(event => {
             statusMessage += `• ${event.name} (${formatDateTime(event.datetime)})\n`;
@@ -1033,6 +1034,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             );
 
             if (unregisteredEvents.length > 0) {
+              statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
               statusMessage += "📝 Доступны для регистрации:\n\n";
               for (const event of unregisteredEvents) {
                 // Get transport statistics for this event
