@@ -1419,7 +1419,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             !activeRegistrations.some(reg => reg.eventId === event.id)
           );
           
+          console.log(`=== UNREGISTERED EVENTS === User ${telegramId} has ${unregisteredEvents.length} unregistered events`);
+          unregisteredEvents.forEach(event => {
+            console.log(`=== UNREGISTERED EVENT === ${event.id} - ${event.name}`);
+          });
+          
           if (unregisteredEvents.length > 0) {
+            console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
             statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
@@ -1639,7 +1645,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             !activeRegistrations.some(reg => reg.eventId === event.id)
           );
           
+          console.log(`=== UNREGISTERED EVENTS === User ${telegramId} has ${unregisteredEvents.length} unregistered events`);
+          unregisteredEvents.forEach(event => {
+            console.log(`=== UNREGISTERED EVENT === ${event.id} - ${event.name}`);
+          });
+          
           if (unregisteredEvents.length > 0) {
+            console.log(`=== ADDING SEPARATOR === Adding visual separator before unregistered events`);
             statusMessage += "\n➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n";
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
