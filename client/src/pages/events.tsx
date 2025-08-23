@@ -246,10 +246,18 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
   const confirmLinkPreviewChange = () => {
     if (!pendingLinkPreviewChange) return;
 
-    const { newValue } = pendingLinkPreviewChange;
+    const { newValue, source } = pendingLinkPreviewChange;
 
-    // Only update all events via bulk API - don't update local state
-    // This prevents conflicts between local updates and bulk updates
+    // Update local state for immediate visual feedback
+    if (source === 'create') {
+      setNewEvent({ ...newEvent, disableLinkPreviews: !newValue });
+    } else {
+      if (editingEvent) {
+        setEditingEvent({ ...editingEvent, disableLinkPreviews: !newValue });
+      }
+    }
+
+    // Update all events in database via bulk API
     updateAllEventsLinkPreviewsMutation.mutate(!newValue);
 
     setShowLinkPreviewAlert(false);
