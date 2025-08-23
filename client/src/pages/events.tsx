@@ -35,6 +35,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     location: "",
     datetime: "",
     allowedTransportTypes: ["monowheel", "scooter", "eboard", "spectator"] as string[],
+    disableLinkPreviews: false,
     chatIds: [] as number[]
   });
   const [isCustomLocation, setIsCustomLocation] = useState(false);
@@ -72,7 +73,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       setShowCreateDialog(false);
-      setNewEvent({ name: "", description: "", location: "", datetime: "", allowedTransportTypes: ["monowheel", "scooter", "eboard", "spectator"], chatIds: [] });
+      setNewEvent({ name: "", description: "", location: "", datetime: "", allowedTransportTypes: ["monowheel", "scooter", "eboard", "spectator"], disableLinkPreviews: false, chatIds: [] });
       setIsCustomLocation(false);
       toast({
         title: "Успешно",
@@ -194,6 +195,7 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
         location: editingEvent.location,
         datetime: editingEvent.datetime,
         allowedTransportTypes: editingEvent.allowedTransportTypes,
+        disableLinkPreviews: editingEvent.disableLinkPreviews,
         chatIds: editingEvent.chatIds || [],
         isActive: editingEvent.isActive,
       },
@@ -475,6 +477,18 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 <span>Необязательное поле</span>
                 <span>{newEvent.description.length}/900</span>
               </div>
+              <div className="flex items-center space-x-2 mt-2">
+                <Checkbox
+                  id="disable-link-previews"
+                  checked={!newEvent.disableLinkPreviews}
+                  onCheckedChange={(checked) => {
+                    setNewEvent({ ...newEvent, disableLinkPreviews: !checked });
+                  }}
+                />
+                <label htmlFor="disable-link-previews" className="text-sm cursor-pointer">
+                  Показывать превью ссылок в сообщениях бота
+                </label>
+              </div>
             </div>
             <div>
               <Label htmlFor="location">Место проведения</Label>
@@ -645,6 +659,18 @@ export default function Events({ onViewParticipants }: EventsProps = {}) {
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Необязательное поле</span>
                   <span>{(editingEvent.description || "").length}/900</span>
+                </div>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Checkbox
+                    id="edit-disable-link-previews"
+                    checked={!editingEvent.disableLinkPreviews}
+                    onCheckedChange={(checked) => {
+                      setEditingEvent({ ...editingEvent, disableLinkPreviews: !checked });
+                    }}
+                  />
+                  <label htmlFor="edit-disable-link-previews" className="text-sm cursor-pointer">
+                    Показывать превью ссылок в сообщениях бота
+                  </label>
                 </div>
               </div>
               <div>
