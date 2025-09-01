@@ -142,10 +142,13 @@ async function sendPrivateMessage(
   chatId: string, 
   text: string, 
   options?: any,
-  currentUserMessageId?: number
+  currentUserMessageId?: number,
+  clearOldMessages: boolean = true
 ): Promise<TelegramBot.Message> {
-  // First delete all old messages in this private chat
-  await deleteOldPrivateMessages(bot, chatId, currentUserMessageId);
+  // First delete all old messages in this private chat (if enabled)
+  if (clearOldMessages) {
+    await deleteOldPrivateMessages(bot, chatId, currentUserMessageId);
+  }
   
   // Send new message
   const sentMessage = await bot.sendMessage(chatId, text, options);
@@ -686,9 +689,6 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
     try {
       await bot.answerCallbackQuery(query.id);
-      
-      // Clear old messages before processing callback
-      await deleteOldPrivateMessages(bot, chatId);
 
       if (data.startsWith('select_event_')) {
         const eventId = parseInt(data.replace('select_event_', ''));
@@ -722,7 +722,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             transportInfo = `🚗 Транспорт: ${getTransportTypeLabel(lastRegistration.transportType)}${lastRegistration.transportModel ? ` (${lastRegistration.transportModel})` : ''}\n`;
           }
 
-          return bot.sendMessage(
+          return sendPrivateMessage(
+            bot,
             chatId,
             `Вы выбрали: "${event.name}"\n` +
             (event.description ? `📝 ${event.description}\n\n` : '\n') +
@@ -752,7 +753,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname: query.from.username,
         });
 
-        return bot.sendMessage(
+        return sendPrivateMessage(
+          bot,
           chatId,
           `Вы выбрали: "${event.name}"\n` +
           (event.description ? `📝 ${event.description}\n` : '') +
