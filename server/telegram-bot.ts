@@ -110,8 +110,8 @@ async function deleteOldPrivateMessages(bot: TelegramBot, chatId: string, curren
   if (currentMessageId) {
     console.log(`=== DELETE OLD MESSAGES === Scanning backwards from message ${currentMessageId} to find bot messages`);
     
-    // Try to delete up to 20 previous messages that might be from the bot
-    for (let i = 1; i <= 20; i++) {
+    // Try to delete up to 50 previous messages that might be from the bot
+    for (let i = 1; i <= 50; i++) {
       const targetMessageId = currentMessageId - i;
       if (targetMessageId <= 0) break;
       
@@ -686,6 +686,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
     try {
       await bot.answerCallbackQuery(query.id);
+      
+      // Clear old messages before processing callback
+      await deleteOldPrivateMessages(bot, chatId);
 
       if (data.startsWith('select_event_')) {
         const eventId = parseInt(data.replace('select_event_', ''));
@@ -819,7 +822,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       if (data === 'use_existing_data') {
         const state = userStates.get(telegramId);
         if (!state || !state.existingData || !state.eventId) {
-          return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
+          return sendPrivateMessage(bot, chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
         try {
@@ -965,7 +968,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       if (data === 'change_data') {
         const state = userStates.get(telegramId);
         if (!state || !state.eventId) {
-          return bot.sendMessage(chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
+          return sendPrivateMessage(bot, chatId, "Произошла ошибка. Попробуйте начать регистрацию заново.");
         }
 
         // Build keyboard dynamically based on transport type
@@ -1343,7 +1346,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               }]);
             });
 
-            return bot.sendMessage(chatId, statusMessage, {
+            return sendPrivateMessage(bot, chatId, statusMessage, {
               reply_markup: { inline_keyboard: keyboard },
               parse_mode: 'Markdown'
             });
@@ -1408,7 +1411,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           }
         } catch (error) {
           console.error('Error handling go_home:', error);
-          return bot.sendMessage(chatId, "Произошла ошибка при загрузке главного меню. Попробуйте позже.");
+          return sendPrivateMessage(bot, chatId, "Произошла ошибка при загрузке главного меню. Попробуйте позже.");
         }
       }
 
