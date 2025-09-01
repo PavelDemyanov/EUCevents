@@ -1623,7 +1623,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         console.log(`=== STEP 4 === User has access to ${accessibleEvents.length} events`);
         
         if (accessibleEvents.length === 0) {
-          return bot.sendMessage(
+          return sendPrivateMessage(
+            bot,
             chatId,
             "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
           );
@@ -1715,7 +1716,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             console.log(`=== EVENT IN MESSAGE === Event ${event.id} (${event.name}): disableLinkPreviews = ${event.disableLinkPreviews}`);
           });
 
-          return bot.sendMessage(chatId, statusMessage, {
+          return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
             parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
@@ -1945,7 +1946,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             console.log(`=== EVENT IN MESSAGE === Event ${event.id} (${event.name}): disableLinkPreviews = ${event.disableLinkPreviews}`);
           });
 
-          return bot.sendMessage(chatId, statusMessage, {
+          return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
             parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
