@@ -83,35 +83,57 @@ let updateIntervalRef: NodeJS.Timeout | null = null;
 let currentStorage: IStorage | null = null;
 
 // Function to delete old bot messages in private chat
-async function deleteOldPrivateMessages(bot: TelegramBot, chatId: string): Promise<void> {
+async function deleteOldPrivateMessages(bot: TelegramBot, chatId: string, currentMessageId?: number): Promise<void> {
   console.log(`=== DELETE OLD MESSAGES === Starting deletion for chat ${chatId}`);
   const messageIds = privateMessageStorage.get(chatId);
   console.log(`=== DELETE OLD MESSAGES === Found ${messageIds ? messageIds.length : 0} stored messages`);
   
-  if (!messageIds || messageIds.length === 0) {
-    console.log(`=== DELETE OLD MESSAGES === No messages to delete for chat ${chatId}`);
-    return;
-  }
-
-  console.log(`=== DELETE OLD MESSAGES === Deleting ${messageIds.length} old messages in chat ${chatId}: [${messageIds.join(', ')}]`);
+  let deletedCount = 0;
   
-  const deletedIds: number[] = [];
-  for (const messageId of messageIds) {
-    try {
-      console.log(`=== DELETE OLD MESSAGES === Trying to delete message ${messageId}`);
-      await bot.deleteMessage(chatId, messageId);
-      console.log(`=== DELETE OLD MESSAGES === Successfully deleted message ${messageId}`);
-      deletedIds.push(messageId);
-    } catch (error: any) {
-      // Message might already be deleted or too old, skip silently
-      console.log(`=== DELETE OLD MESSAGES === Could not delete message ${messageId} in chat ${chatId}: ${error.message}`);
-      deletedIds.push(messageId); // Remove from tracking anyway
+  // First try to delete tracked messages
+  if (messageIds && messageIds.length > 0) {
+    console.log(`=== DELETE OLD MESSAGES === Deleting ${messageIds.length} tracked messages in chat ${chatId}: [${messageIds.join(', ')}]`);
+    
+    for (const messageId of messageIds) {
+      try {
+        console.log(`=== DELETE OLD MESSAGES === Trying to delete tracked message ${messageId}`);
+        await bot.deleteMessage(chatId, messageId);
+        console.log(`=== DELETE OLD MESSAGES === Successfully deleted tracked message ${messageId}`);
+        deletedCount++;
+      } catch (error: any) {
+        console.log(`=== DELETE OLD MESSAGES === Could not delete tracked message ${messageId}: ${error.message}`);
+      }
+    }
+  }
+  
+  // If we have current message ID, try to delete recent bot messages by scanning backwards
+  if (currentMessageId) {
+    console.log(`=== DELETE OLD MESSAGES === Scanning backwards from message ${currentMessageId} to find bot messages`);
+    
+    // Try to delete up to 20 previous messages that might be from the bot
+    for (let i = 1; i <= 20; i++) {
+      const targetMessageId = currentMessageId - i;
+      if (targetMessageId <= 0) break;
+      
+      try {
+        await bot.deleteMessage(chatId, targetMessageId);
+        console.log(`=== DELETE OLD MESSAGES === Successfully deleted scanned message ${targetMessageId}`);
+        deletedCount++;
+      } catch (error: any) {
+        // Silent fail - message might not exist, not be from bot, or too old
+        if (error.message.includes('message to delete not found') || error.message.includes('message can\'t be deleted')) {
+          // These are expected errors, continue scanning
+          continue;
+        } else {
+          console.log(`=== DELETE OLD MESSAGES === Error deleting scanned message ${targetMessageId}: ${error.message}`);
+        }
+      }
     }
   }
   
   // Clear all tracked messages for this chat
   privateMessageStorage.set(chatId, []);
-  console.log(`=== DELETE OLD MESSAGES === Cleared ${deletedIds.length} message IDs from tracking for chat ${chatId}`);
+  console.log(`=== DELETE OLD MESSAGES === Completed deletion. Total messages deleted: ${deletedCount}`);
 }
 
 // Function to send message to private chat with old message cleanup
@@ -119,10 +141,11 @@ async function sendPrivateMessage(
   bot: TelegramBot, 
   chatId: string, 
   text: string, 
-  options?: any
+  options?: any,
+  currentUserMessageId?: number
 ): Promise<TelegramBot.Message> {
   // First delete all old messages in this private chat
-  await deleteOldPrivateMessages(bot, chatId);
+  await deleteOldPrivateMessages(bot, chatId, currentUserMessageId);
   
   // Send new message
   const sentMessage = await bot.sendMessage(chatId, text, options);
@@ -1632,7 +1655,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           return sendPrivateMessage(
             bot,
             chatId,
-            "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
+            "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп.",
+            undefined,
+            msg.message_id
           );
         }
 
@@ -1726,7 +1751,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             reply_markup: { inline_keyboard: keyboard },
             parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
-          });
+          }, msg.message_id);
         }
 
         // If no active registrations, show event selection
@@ -1956,7 +1981,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             reply_markup: { inline_keyboard: keyboard },
             parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
-          });
+          }, msg.message_id);
         }
 
         // Continue with single event logic...
