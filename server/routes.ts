@@ -964,6 +964,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const settingId = parseInt(req.params.id);
       const updateData = insertSystemSettingSchema.partial().parse(req.body);
       const setting = await storage.updateSystemSetting(settingId, updateData);
+      
+      // Clear telegram separator cache when that setting is updated
+      if (setting.key === 'telegram_message_separator') {
+        const { clearTelegramSeparatorCache } = await import('./telegram-bot');
+        clearTelegramSeparatorCache();
+      }
+      
       res.json(setting);
     } catch (error: any) {
       console.error("Error updating system setting:", error);

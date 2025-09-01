@@ -14,6 +14,11 @@ const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> 
   }
 }, { maxAge: 5000 }); // Cache for 5 seconds only
 
+// Function to clear the separator cache
+export function clearTelegramSeparatorCache() {
+  getTelegramSeparator.clear();
+}
+
 interface UserRegistrationState {
   step: 'event_selection' | 'full_name' | 'phone' | 'transport_type' | 'transport_model' | 'confirm_existing_data' | 
         'edit_full_name' | 'edit_phone' | 'edit_transport_type' | 'edit_transport_model';
