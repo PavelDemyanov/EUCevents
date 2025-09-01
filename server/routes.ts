@@ -965,10 +965,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = insertSystemSettingSchema.partial().parse(req.body);
       const setting = await storage.updateSystemSetting(settingId, updateData);
       
-      // Clear telegram separator cache when that setting is updated
+      // Clear caches and restart intervals when specific settings are updated
       if (setting.key === 'telegram_message_separator') {
         const { clearTelegramSeparatorCache } = await import('./telegram-bot');
         clearTelegramSeparatorCache();
+      } else if (setting.key === 'event_message_update_interval') {
+        const { clearEventUpdateIntervalCache, restartEventUpdateInterval } = await import('./telegram-bot');
+        clearEventUpdateIntervalCache();
+        await restartEventUpdateInterval();
       }
       
       res.json(setting);

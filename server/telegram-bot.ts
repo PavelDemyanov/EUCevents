@@ -14,9 +14,33 @@ const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> 
   }
 }, { maxAge: 5000 }); // Cache for 5 seconds only
 
+// Get event message update interval from settings with cache
+const getEventUpdateInterval = memoize(async (storage: IStorage): Promise<number> => {
+  try {
+    const setting = await storage.getSystemSetting('event_message_update_interval');
+    const interval = setting?.value ? parseInt(setting.value) : 300000; // Default 5 minutes in milliseconds
+    return isNaN(interval) ? 300000 : interval;
+  } catch (error) {
+    console.error('Failed to get event update interval setting:', error);
+    return 300000; // Default 5 minutes in milliseconds
+  }
+}, { maxAge: 5000 }); // Cache for 5 seconds only
+
 // Function to clear the separator cache
 export function clearTelegramSeparatorCache() {
   getTelegramSeparator.clear();
+}
+
+// Function to clear the event update interval cache
+export function clearEventUpdateIntervalCache() {
+  getEventUpdateInterval.clear();
+}
+
+// Function to restart auto-update interval (exported for API use)
+export async function restartEventUpdateInterval() {
+  if (activeBotInstance && currentStorage) {
+    await restartUpdateInterval(activeBotInstance, currentStorage);
+  }
 }
 
 interface UserRegistrationState {
@@ -51,11 +75,9 @@ const activeEventMessages = new Map<string, ActiveEventMessage>();
 // Global bot instance to prevent multiple polling
 let activeBotInstance: TelegramBot | null = null;
 
-// Auto-update interval (5 minutes)
-const UPDATE_INTERVAL = 5 * 60 * 1000;
-
-// Global update interval reference
+// Global update interval reference and storage reference for dynamic interval updates
 let updateIntervalRef: NodeJS.Timeout | null = null;
+let currentStorage: IStorage | null = null;
 
 // Function to check if user is a member of a specific chat
 async function isUserChatMember(bot: TelegramBot, chatId: string, userId: string): Promise<boolean> {
@@ -139,6 +161,30 @@ async function generateEventMessage(
             `Или отправьте команду /start боту в личку`;
 
   return message;
+}
+
+// Function to restart auto-update interval with new settings
+async function restartUpdateInterval(bot: TelegramBot, storage: IStorage) {
+  // Stop existing interval
+  if (updateIntervalRef) {
+    clearInterval(updateIntervalRef);
+    updateIntervalRef = null;
+    console.log('Stopped existing auto-update interval');
+  }
+
+  // Get current interval setting
+  const interval = await getEventUpdateInterval(storage);
+  
+  // Start new interval
+  updateIntervalRef = setInterval(async () => {
+    try {
+      await updateActiveEventMessages(bot, storage);
+    } catch (error) {
+      console.error('Error in auto-update interval:', error);
+    }
+  }, interval);
+  
+  console.log(`Started auto-update interval for event messages (every ${interval / 1000 / 60} minutes)`);
 }
 
 // Function to update active event messages
@@ -230,6 +276,9 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     updateIntervalRef = null;
     console.log('Stopped existing auto-update interval');
   }
+
+  // Store storage reference for later use
+  currentStorage = storage;
 
   console.log('Starting new Telegram bot...');
   
@@ -2224,16 +2273,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     console.error('Bot polling could not be started. Bot will not respond to messages.');
   }
 
-  // Start auto-update interval for event messages
-  updateIntervalRef = setInterval(async () => {
-    try {
-      await updateActiveEventMessages(bot, storage);
-    } catch (error) {
-      console.error('Error in auto-update interval:', error);
-    }
-  }, UPDATE_INTERVAL);
-  
-  console.log(`Started auto-update interval for event messages (every ${UPDATE_INTERVAL / 1000 / 60} minutes)`);
+  // Start auto-update interval for event messages with dynamic interval
+  await restartUpdateInterval(bot, storage);
 
   // Export bot instance for external use
   return bot;

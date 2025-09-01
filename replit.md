@@ -53,14 +53,18 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 
 ### Recent Updates (September 1, 2025)
 
-- **Auto-Updating Event Messages (September 1, 2025)**: Implemented automatic refresh of event information in group chats
+- **Auto-Updating Event Messages with Configurable Interval (September 1, 2025)**: Implemented automatic refresh of event information in group chats with admin-configurable update intervals
   - Added real-time tracking of active event messages sent via /event command in group chats
-  - Created automatic message update system that refreshes participant statistics every 5 minutes
+  - Created automatic message update system with configurable refresh intervals (default 5 minutes, minimum 30 seconds)
+  - Added "Интервал обновления сообщений" setting in Admin Settings page for dynamic interval configuration
+  - Implemented cached settings system with automatic cache clearing and interval restart when settings change
+  - Enhanced bot to use dynamic intervals from database instead of hardcoded constants
   - Implemented smart message management with automatic cleanup of outdated/inaccessible messages
   - Enhanced bot memory to track message IDs and chat associations for seamless updates
   - Added error handling for deleted messages, blocked bots, and removed chat access
   - System ensures participants always see current registration counts without manual /event commands
   - Reduces chat spam while keeping information fresh and accurate for event participants
+  - Administrators can adjust update frequency based on event activity and chat preferences
 
 ### Previous Updates (August 21, 2025)
 

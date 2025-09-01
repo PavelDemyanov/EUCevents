@@ -32,6 +32,7 @@ export default function Settings() {
   const [editingChat, setEditingChat] = useState<Chat | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [telegramSeparator, setTelegramSeparator] = useState("");
+  const [eventUpdateInterval, setEventUpdateInterval] = useState("300000");
   const [newBot, setNewBot] = useState({
     token: "",
     name: "",
@@ -80,11 +81,16 @@ export default function Settings() {
     queryKey: ["/api/settings"],
   });
 
-  // Initialize telegram separator from settings
+  // Initialize settings from system settings
   useEffect(() => {
     const separatorSetting = systemSettings.find(s => s.key === 'telegram_message_separator');
     if (separatorSetting) {
       setTelegramSeparator(separatorSetting.value);
+    }
+    
+    const intervalSetting = systemSettings.find(s => s.key === 'event_message_update_interval');
+    if (intervalSetting) {
+      setEventUpdateInterval(intervalSetting.value);
     }
   }, [systemSettings]);
 
@@ -401,8 +407,49 @@ export default function Settings() {
     },
   });
 
+  // System Settings mutation for event update interval
+  const updateIntervalMutation = useMutation({
+    mutationFn: async (interval: string) => {
+      const intervalValue = parseInt(interval);
+      if (isNaN(intervalValue) || intervalValue < 30000) {
+        throw new Error('Интервал должен быть не менее 30 секунд (30000 миллисекунд)');
+      }
+      
+      const intervalSetting = systemSettings.find(s => s.key === 'event_message_update_interval');
+      if (intervalSetting) {
+        await apiRequest(`/api/settings/${intervalSetting.id}`, {
+          method: "PUT",
+          body: { key: 'event_message_update_interval', value: interval, description: 'Интервал автоматического обновления сообщений о событиях в миллисекундах' }
+        });
+      } else {
+        await apiRequest("/api/settings", {
+          method: "POST",
+          body: { key: 'event_message_update_interval', value: interval, description: 'Интервал автоматического обновления сообщений о событиях в миллисекундах' }
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Успешно",
+        description: "Интервал обновления сообщений изменен",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось обновить интервал",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveSeparator = () => {
     updateSeparatorMutation.mutate(telegramSeparator);
+  };
+
+  const handleSaveInterval = () => {
+    updateIntervalMutation.mutate(eventUpdateInterval);
   };
 
   if (botsLoading || chatsLoading) {
@@ -902,6 +949,33 @@ export default function Settings() {
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 Разделитель между секциями "Ваши регистрации" и "Доступны для регистрации" в сообщениях бота
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="event-update-interval">Интервал обновления сообщений (миллисекунды)</Label>
+              <div className="mt-2 flex gap-3">
+                <Input
+                  id="event-update-interval"
+                  type="number"
+                  placeholder="300000"
+                  min="30000"
+                  step="1000"
+                  value={eventUpdateInterval}
+                  onChange={(e) => setEventUpdateInterval(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-event-update-interval"
+                />
+                <Button 
+                  onClick={handleSaveInterval} 
+                  disabled={updateIntervalMutation.isPending || settingsLoading}
+                  data-testid="button-save-interval"
+                >
+                  {updateIntervalMutation.isPending ? "Сохранение..." : "Сохранить"}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Интервал автоматического обновления сообщений о событиях в группах (по умолчанию 300000 = 5 минут, минимум 30000 = 30 секунд)
               </p>
             </div>
           </div>
