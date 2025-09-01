@@ -171,7 +171,7 @@ async function updateActiveEventMessages(bot: TelegramBot, storage: IStorage) {
       // Check if message content has changed (to avoid unnecessary API calls)
       const shouldDisablePreview = activeEvents.length > 0 && activeEvents.some(event => event.disableLinkPreviews);
       
-      // Try to edit the message
+      // Try to edit the message (Telegram will return error if content is identical)
       await bot.editMessageText(updatedMessage, {
         chat_id: messageInfo.chatId,
         message_id: messageInfo.messageId,
@@ -187,14 +187,16 @@ async function updateActiveEventMessages(bot: TelegramBot, storage: IStorage) {
     } catch (error: any) {
       console.error(`Error updating message ${messageInfo.messageId} in chat ${messageInfo.chatId}:`, error.message);
       
-      // If message was deleted or chat is not accessible, remove from tracking
-      if (error.message.includes('message is not modified') ||
-          error.message.includes('message to edit not found') ||
+      // Only remove from tracking if message/chat is truly inaccessible
+      if (error.message.includes('message to edit not found') ||
           error.message.includes('chat not found') ||
           error.message.includes('bot was blocked') ||
           error.message.includes('kicked from the group')) {
         messagesToRemove.push(messageKey);
         console.log(`Removing message ${messageInfo.messageId} from tracking due to error: ${error.message}`);
+      } else if (error.message.includes('message is not modified')) {
+        // Content didn't change - this is normal, keep tracking the message
+        console.log(`Message ${messageInfo.messageId} in chat ${messageInfo.chatId} content unchanged - continuing to track`);
       }
     }
   }
@@ -318,7 +320,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
       // Store message info for auto-updates
       if (sentMessage.message_id) {
-        const messageKey = `${chatId}`;
+        const messageKey = `${chatId}_${sentMessage.message_id}`;
         activeEventMessages.set(messageKey, {
           chatId,
           messageId: sentMessage.message_id,
