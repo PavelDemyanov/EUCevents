@@ -23,8 +23,16 @@ if (isNeonDatabase) {
   pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
   db = neonDrizzle({ client: pool, schema });
 } else {
-  // Use regular PostgreSQL configuration  
-  pool = new PgPool({ connectionString: process.env.DATABASE_URL });
+  // Use regular PostgreSQL configuration with explicit URL to avoid PG* env var conflicts
+  pool = new PgPool({ 
+    connectionString: process.env.DATABASE_URL,
+    // Explicitly disable environment variable usage to prevent conflicts
+    host: undefined,
+    port: undefined,
+    database: undefined,
+    user: undefined,
+    password: undefined
+  });
   db = pgDrizzle({ client: pool, schema });
 }
 
