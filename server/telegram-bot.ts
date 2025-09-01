@@ -72,12 +72,65 @@ interface ActiveEventMessage {
 // Storage for active event messages that need periodic updates
 const activeEventMessages = new Map<string, ActiveEventMessage>();
 
+// Storage for private chat message IDs to enable old message cleanup
+const privateMessageStorage = new Map<string, number[]>();
+
 // Global bot instance to prevent multiple polling
 let activeBotInstance: TelegramBot | null = null;
 
 // Global update interval reference and storage reference for dynamic interval updates
 let updateIntervalRef: NodeJS.Timeout | null = null;
 let currentStorage: IStorage | null = null;
+
+// Function to delete old bot messages in private chat
+async function deleteOldPrivateMessages(bot: TelegramBot, chatId: string): Promise<void> {
+  const messageIds = privateMessageStorage.get(chatId);
+  if (!messageIds || messageIds.length === 0) {
+    return;
+  }
+
+  console.log(`Deleting ${messageIds.length} old messages in chat ${chatId}`);
+  
+  const deletedIds: number[] = [];
+  for (const messageId of messageIds) {
+    try {
+      await bot.deleteMessage(chatId, messageId);
+      deletedIds.push(messageId);
+    } catch (error: any) {
+      // Message might already be deleted or too old, skip silently
+      console.log(`Could not delete message ${messageId} in chat ${chatId}: ${error.message}`);
+      deletedIds.push(messageId); // Remove from tracking anyway
+    }
+  }
+  
+  // Clear all tracked messages for this chat
+  privateMessageStorage.set(chatId, []);
+  console.log(`Cleared ${deletedIds.length} message IDs from tracking for chat ${chatId}`);
+}
+
+// Function to send message to private chat with old message cleanup
+async function sendPrivateMessage(
+  bot: TelegramBot, 
+  chatId: string, 
+  text: string, 
+  options?: any
+): Promise<TelegramBot.Message> {
+  // First delete all old messages in this private chat
+  await deleteOldPrivateMessages(bot, chatId);
+  
+  // Send new message
+  const sentMessage = await bot.sendMessage(chatId, text, options);
+  
+  // Store new message ID for future cleanup
+  if (sentMessage.message_id) {
+    const currentMessages = privateMessageStorage.get(chatId) || [];
+    currentMessages.push(sentMessage.message_id);
+    privateMessageStorage.set(chatId, currentMessages);
+    console.log(`Stored message ${sentMessage.message_id} for future cleanup in chat ${chatId}`);
+  }
+  
+  return sentMessage;
+}
 
 // Function to check if user is a member of a specific chat
 async function isUserChatMember(bot: TelegramBot, chatId: string, userId: string): Promise<boolean> {
@@ -411,7 +464,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       const accessibleEvents = await filterEventsByUserMembership(bot, activeEvents, telegramId, storage);
       
       if (accessibleEvents.length === 0) {
-        return bot.sendMessage(
+        return sendPrivateMessage(
+          bot,
           chatId,
           "В данный момент нет доступных мероприятий для регистрации.\n\n💡 Мероприятия доступны только участникам соответствующих групп."
         );
@@ -478,7 +532,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         // Check if any accessible event has link previews disabled
         const shouldDisablePreview = accessibleEvents.some(event => event.disableLinkPreviews);
         
-        return bot.sendMessage(chatId, statusMessage, {
+        return sendPrivateMessage(bot, chatId, statusMessage, {
           reply_markup: { inline_keyboard: keyboard },
           parse_mode: 'Markdown',
           disable_web_page_preview: shouldDisablePreview
@@ -519,7 +573,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           }
 
           console.log(`=== SENDING MESSAGE WITH disable_web_page_preview === ${accessibleEvents[0].disableLinkPreviews} for event ${accessibleEvents[0].id}`);
-          return bot.sendMessage(
+          return sendPrivateMessage(
+            bot,
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
             `📅 ${accessibleEvents[0].name}\n` +
@@ -552,7 +607,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname,
         });
 
-        return bot.sendMessage(
+        return sendPrivateMessage(
+          bot,
           chatId,
           `Добро пожаловать на регистрацию мероприятия!\n\n` +
           `📅 ${accessibleEvents[0].name}\n` +
@@ -607,7 +663,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const event = await storage.getEvent(eventId);
         
         if (!event) {
-          return bot.sendMessage(chatId, "Мероприятие не найдено.");
+          return sendPrivateMessage(bot, chatId, "Мероприятие не найдено.");
         }
 
         // Check if user already has existing registrations
@@ -845,7 +901,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             } else {
               console.error('Error creating user:', error);
               userStates.delete(telegramId);
-              return bot.sendMessage(chatId, "Произошла ошибка при регистрации. Попробуйте позже.");
+              return sendPrivateMessage(bot, chatId, "Произошла ошибка при регистрации. Попробуйте позже.");
             }
           }
         }
@@ -919,7 +975,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             ...state,
             step: 'full_name',
           });
-          return bot.sendMessage(chatId, "Введите новые ФИО:");
+          return sendPrivateMessage(bot, chatId, "Введите новые ФИО:");
         }
       }
 
@@ -931,7 +987,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             step: 'phone',
             fullName: state.existingData?.fullName || '',
           });
-          return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
+          return sendPrivateMessage(bot, chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
         }
       }
 
@@ -1017,7 +1073,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             phone: state.existingData.phone,
             transportType: state.existingData.transportType || 'monowheel',
           });
-          return bot.sendMessage(chatId, "Введите модель транспорта (или пропустите, написав '-'):");
+          return sendPrivateMessage(bot, chatId, "Введите модель транспорта (или пропустите, написав '-'):");
         }
       }
 
@@ -1029,7 +1085,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             eventId: state.eventId,
             telegramNickname: state.telegramNickname,
           });
-          return bot.sendMessage(chatId, "Начинаем регистрацию заново. Введите ваши ФИО:");
+          return sendPrivateMessage(bot, chatId, "Начинаем регистрацию заново. Введите ваши ФИО:");
         }
       }
 
@@ -1040,7 +1096,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         const userRegistration = existingUsers.find(u => u.eventId === eventId && u.isActive);
         
         if (!event || !userRegistration) {
-          return bot.sendMessage(chatId, "Мероприятие или регистрация не найдены.");
+          return sendPrivateMessage(bot, chatId, "Мероприятие или регистрация не найдены.");
         }
 
         const transportInfo = userRegistration.transportModel 
@@ -1078,7 +1134,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname: query.from?.username || undefined,
         });
         
-        return bot.sendMessage(chatId, "Введите новые ФИО:");
+        return sendPrivateMessage(bot, chatId, "Введите новые ФИО:");
       }
 
       if (data.startsWith('edit_phone_')) {
@@ -1089,7 +1145,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           telegramNickname: query.from?.username || undefined,
         });
         
-        return bot.sendMessage(chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
+        return sendPrivateMessage(bot, chatId, "Введите новый номер телефона в формате +7XXXXXXXXXX:");
       }
 
       if (data.startsWith('edit_transport_')) {
@@ -1311,7 +1367,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 callback_data: `select_event_${event.id}`
               }]);
               
-              return bot.sendMessage(
+              return sendPrivateMessage(
+                bot,
                 chatId,
                 `🏠 Главное меню\n\n📝 Выберите мероприятие для регистрации:`,
                 {
