@@ -175,7 +175,7 @@ async function restartUpdateInterval(bot: TelegramBot, storage: IStorage) {
   // Get current interval setting
   const interval = await getEventUpdateInterval(storage);
   
-  // Start new interval
+  // Start new interval (will wait full interval before first execution)
   updateIntervalRef = setInterval(async () => {
     try {
       await updateActiveEventMessages(bot, storage);
@@ -184,7 +184,7 @@ async function restartUpdateInterval(bot: TelegramBot, storage: IStorage) {
     }
   }, interval);
   
-  console.log(`Started auto-update interval for event messages (every ${interval / 1000 / 60} minutes)`);
+  console.log(`Started auto-update interval for event messages (every ${interval / 1000 / 60} minutes, next update in ${interval / 1000} seconds)`);
 }
 
 // Function to update active event messages
