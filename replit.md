@@ -51,7 +51,18 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
 - **Build Tools**: Vite for frontend bundling, esbuild for server bundling
 - **Validation**: Zod for runtime type validation and schema definition
 
-### Recent Updates (August 21, 2025)
+### Recent Updates (September 1, 2025)
+
+- **Auto-Updating Event Messages (September 1, 2025)**: Implemented automatic refresh of event information in group chats
+  - Added real-time tracking of active event messages sent via /event command in group chats
+  - Created automatic message update system that refreshes participant statistics every 5 minutes
+  - Implemented smart message management with automatic cleanup of outdated/inaccessible messages
+  - Enhanced bot memory to track message IDs and chat associations for seamless updates
+  - Added error handling for deleted messages, blocked bots, and removed chat access
+  - System ensures participants always see current registration counts without manual /event commands
+  - Reduces chat spam while keeping information fresh and accurate for event participants
+
+### Previous Updates (August 21, 2025)
 
 - **Event Description Field (Completed)**: Added comprehensive description support for events
   - Added 900-character description field to events database schema

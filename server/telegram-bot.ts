@@ -37,8 +37,25 @@ interface UserRegistrationState {
 
 const userStates = new Map<string, UserRegistrationState>();
 
+// Interface for tracking active event messages that need auto-updating
+interface ActiveEventMessage {
+  chatId: string;
+  messageId: number;
+  chatRecordId: number;
+  lastUpdated: Date;
+}
+
+// Storage for active event messages that need periodic updates
+const activeEventMessages = new Map<string, ActiveEventMessage>();
+
 // Global bot instance to prevent multiple polling
 let activeBotInstance: TelegramBot | null = null;
+
+// Auto-update interval (5 minutes)
+const UPDATE_INTERVAL = 5 * 60 * 1000;
+
+// Global update interval reference
+let updateIntervalRef: NodeJS.Timeout | null = null;
 
 // Function to check if user is a member of a specific chat
 async function isUserChatMember(bot: TelegramBot, chatId: string, userId: string): Promise<boolean> {
@@ -83,7 +100,112 @@ async function filterEventsByUserMembership(bot: TelegramBot, events: any[], use
   return filteredEvents;
 }
 
+// Function to generate event message content
+async function generateEventMessage(
+  activeEvents: any[], 
+  botUsername: string, 
+  storage: IStorage
+): Promise<string> {
+  let message = `📅 АКТИВНЫЕ МЕРОПРИЯТИЯ\n\n`;
 
+  for (const event of activeEvents) {
+    // Get transport statistics for this event
+    const participants = await storage.getUsersByEventId(event.id);
+    const activeParticipants = participants.filter(p => p.isActive);
+    const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
+    const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
+    const eboardCount = activeParticipants.filter(p => p.transportType === 'eboard').length;
+    const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
+    const totalCount = activeParticipants.length;
+
+    message += `🎯 **${event.name}**\n`;
+    if (event.description) {
+      message += `📝 ${event.description}\n`;
+    }
+    message += `📍 ${event.location}\n` +
+              `🕐 ${formatDateTime(event.datetime)}\n\n` +
+              `📊 СТАТИСТИКА УЧАСТНИКОВ:\n` +
+              `🛞 Моноколесо: ${monowheelCount} чел.\n` +
+              `🛴 Самокат: ${scooterCount} чел.\n` +
+              `🛹 Электро-борд: ${eboardCount} чел.\n` +
+              `👀 Зрители: ${spectatorCount} чел.\n` +
+              `📋 Всего: ${totalCount} чел.\n\n` +
+              `➖➖➖➖➖➖➖➖➖➖\n\n`;
+  }
+
+  message += `🤖 **Для регистрации или изменения данных:**\n` +
+            `Перейдите в личные сообщения с ботом\n` +
+            `👆 Нажмите сюда ➡️ @${botUsername}\n\n` +
+            `Или отправьте команду /start боту в личку`;
+
+  return message;
+}
+
+// Function to update active event messages
+async function updateActiveEventMessages(bot: TelegramBot, storage: IStorage) {
+  console.log(`Starting auto-update of ${activeEventMessages.size} active event messages`);
+  
+  const messagesToRemove: string[] = [];
+  
+  const messageKeys = Array.from(activeEventMessages.keys());
+  for (const messageKey of messageKeys) {
+    const messageInfo = activeEventMessages.get(messageKey)!;
+    try {
+      // Get bot info for the message generation
+      const botInfo = await bot.getMe();
+      const botUsername = botInfo.username;
+      
+      // Get active events for this chat
+      const activeEvents = await storage.getActiveEventsByChatId(messageInfo.chatRecordId);
+      
+      if (activeEvents.length === 0) {
+        // No more active events, remove message from tracking
+        messagesToRemove.push(messageKey);
+        console.log(`No active events for chat ${messageInfo.chatId}, removing from tracking`);
+        continue;
+      }
+
+      // Generate updated message
+      const updatedMessage = await generateEventMessage(activeEvents, botUsername!, storage);
+      
+      // Check if message content has changed (to avoid unnecessary API calls)
+      const shouldDisablePreview = activeEvents.length > 0 && activeEvents.some(event => event.disableLinkPreviews);
+      
+      // Try to edit the message
+      await bot.editMessageText(updatedMessage, {
+        chat_id: messageInfo.chatId,
+        message_id: messageInfo.messageId,
+        parse_mode: 'Markdown',
+        disable_web_page_preview: shouldDisablePreview
+      });
+      
+      // Update last updated time
+      messageInfo.lastUpdated = new Date();
+      
+      console.log(`Successfully updated message ${messageInfo.messageId} in chat ${messageInfo.chatId}`);
+      
+    } catch (error: any) {
+      console.error(`Error updating message ${messageInfo.messageId} in chat ${messageInfo.chatId}:`, error.message);
+      
+      // If message was deleted or chat is not accessible, remove from tracking
+      if (error.message.includes('message is not modified') ||
+          error.message.includes('message to edit not found') ||
+          error.message.includes('chat not found') ||
+          error.message.includes('bot was blocked') ||
+          error.message.includes('kicked from the group')) {
+        messagesToRemove.push(messageKey);
+        console.log(`Removing message ${messageInfo.messageId} from tracking due to error: ${error.message}`);
+      }
+    }
+  }
+  
+  // Clean up messages that can no longer be updated
+  for (const key of messagesToRemove) {
+    activeEventMessages.delete(key);
+  }
+  
+  console.log(`Auto-update completed. ${messagesToRemove.length} messages removed from tracking.`);
+}
 
 export async function startTelegramBot(token: string, storage: IStorage) {
   // Stop existing bot if running
@@ -98,6 +220,13 @@ export async function startTelegramBot(token: string, storage: IStorage) {
     } catch (error) {
       console.log('Error stopping existing bot:', error);
     }
+  }
+
+  // Stop existing auto-update interval
+  if (updateIntervalRef) {
+    clearInterval(updateIntervalRef);
+    updateIntervalRef = null;
+    console.log('Stopped existing auto-update interval');
   }
 
   console.log('Starting new Telegram bot...');
@@ -175,45 +304,29 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         );
       }
 
-      let message = `📅 АКТИВНЫЕ МЕРОПРИЯТИЯ\n\n`;
-
-      for (const event of activeEvents) {
-        // Get transport statistics for this event
-        const participants = await storage.getUsersByEventId(event.id);
-        const activeParticipants = participants.filter(p => p.isActive);
-        const monowheelCount = activeParticipants.filter(p => p.transportType === 'monowheel').length;
-        const scooterCount = activeParticipants.filter(p => p.transportType === 'scooter').length;
-        const eboardCount = activeParticipants.filter(p => p.transportType === 'eboard').length;
-        const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
-        const totalCount = activeParticipants.length;
-
-        message += `🎯 **${event.name}**\n`;
-        if (event.description) {
-          message += `📝 ${event.description}\n`;
-        }
-        message += `📍 ${event.location}\n` +
-                  `🕐 ${formatDateTime(event.datetime)}\n\n` +
-                  `📊 СТАТИСТИКА УЧАСТНИКОВ:\n` +
-                  `🛞 Моноколесо: ${monowheelCount} чел.\n` +
-                  `🛴 Самокат: ${scooterCount} чел.\n` +
-                  `🛹 Электро-борд: ${eboardCount} чел.\n` +
-                  `👀 Зрители: ${spectatorCount} чел.\n` +
-                  `📋 Всего: ${totalCount} чел.\n\n` +
-                  `➖➖➖➖➖➖➖➖➖➖\n\n`;
-      }
-
-      message += `🤖 **Для регистрации или изменения данных:**\n` +
-                `Перейдите в личные сообщения с ботом\n` +
-                `👆 Нажмите сюда ➡️ @${botUsername}\n\n` +
-                `Или отправьте команду /start боту в личку`;
+      // Generate event message using the shared function
+      const message = await generateEventMessage(activeEvents, botUsername!, storage);
 
       // Determine if link previews should be disabled for this event
       const shouldDisablePreview = activeEvents.length > 0 && activeEvents.some(event => event.disableLinkPreviews);
       
-      await bot.sendMessage(chatId, message, { 
+      // Send message and store its ID for auto-updates
+      const sentMessage = await bot.sendMessage(chatId, message, { 
         parse_mode: 'Markdown',
         disable_web_page_preview: shouldDisablePreview
       });
+
+      // Store message info for auto-updates
+      if (sentMessage.message_id) {
+        const messageKey = `${chatId}`;
+        activeEventMessages.set(messageKey, {
+          chatId,
+          messageId: sentMessage.message_id,
+          chatRecordId: chatRecord.id,
+          lastUpdated: new Date()
+        });
+        console.log(`Stored event message for auto-updates: chat ${chatId}, message ${sentMessage.message_id}`);
+      }
       
     } catch (error) {
       console.error('Error handling /event command:', error);
@@ -2108,6 +2221,17 @@ export async function startTelegramBot(token: string, storage: IStorage) {
   if (!success) {
     console.error('Bot polling could not be started. Bot will not respond to messages.');
   }
+
+  // Start auto-update interval for event messages
+  updateIntervalRef = setInterval(async () => {
+    try {
+      await updateActiveEventMessages(bot, storage);
+    } catch (error) {
+      console.error('Error in auto-update interval:', error);
+    }
+  }, UPDATE_INTERVAL);
+  
+  console.log(`Started auto-update interval for event messages (every ${UPDATE_INTERVAL / 1000 / 60} minutes)`);
 
   // Export bot instance for external use
   return bot;
