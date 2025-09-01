@@ -23,30 +23,10 @@ if (isNeonDatabase) {
   pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
   db = neonDrizzle({ client: pool, schema });
 } else {
-  // Use regular PostgreSQL configuration - force only DATABASE_URL usage
-  // Clear all PG* environment variables to prevent conflicts with DATABASE_URL
-  const originalPgVars = {
-    PGHOST: process.env.PGHOST,
-    PGUSER: process.env.PGUSER, 
-    PGDATABASE: process.env.PGDATABASE,
-    PGPASSWORD: process.env.PGPASSWORD,
-    PGPORT: process.env.PGPORT
-  };
-  
-  // Temporarily clear PG* variables
-  delete process.env.PGHOST;
-  delete process.env.PGUSER;
-  delete process.env.PGDATABASE;
-  delete process.env.PGPASSWORD;
-  delete process.env.PGPORT;
-  
+  // Use regular PostgreSQL configuration - only connectionString to avoid PG* env var conflicts
   pool = new PgPool({ 
     connectionString: process.env.DATABASE_URL
   });
-  
-  // Restore original environment variables (in case other code needs them)
-  Object.assign(process.env, originalPgVars);
-  
   db = pgDrizzle({ client: pool, schema });
 }
 

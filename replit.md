@@ -103,6 +103,12 @@ Phone number format preference: Accept multiple input formats (8XXXXXXXXXX, +7XX
   - Enhanced QUICK_FIX_CLONE.md with complete troubleshooting guide
   - All installation scripts now work end-to-end without manual intervention
 
+- **Database Connection Priority Fix (September 1, 2025)**: Resolved PostgreSQL connection conflicts
+  - Fixed issue where system PG* environment variables (PGHOST, PGUSER, PGDATABASE, PGPASSWORD, PGPORT) override DATABASE_URL
+  - Simplified server/db.ts to use only connectionString parameter, avoiding conflicts with system PostgreSQL variables
+  - Updated README.md with clear troubleshooting section for "relation does not exist" errors
+  - Local deployment now works reliably regardless of system PostgreSQL configuration
+
 - **Previous Updates (August 20, 2025)**:
   - **Public Event Sharing Feature**: Added public event sharing with generated share codes (format: XXX-YYYY-ZZZ)
   - **Public Pages**: Created public event view without phone numbers and admin functions
