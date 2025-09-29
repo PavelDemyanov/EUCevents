@@ -306,7 +306,7 @@ async function updateActiveEventMessages(bot: TelegramBot, storage: IStorage) {
       await bot.editMessageText(updatedMessage, {
         chat_id: messageInfo.chatId,
         message_id: messageInfo.messageId,
-        parse_mode: 'Markdown',
+        // parse_mode: 'Markdown', // Removed to avoid parsing errors
         disable_web_page_preview: shouldDisablePreview
       });
       
@@ -448,7 +448,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       
       // Send message and store its ID for auto-updates
       const sentMessage = await bot.sendMessage(chatId, message, { 
-        parse_mode: 'Markdown',
+        // parse_mode: 'Markdown', // Removed to avoid parsing errors
         disable_web_page_preview: shouldDisablePreview
       });
 
@@ -566,7 +566,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         
         return sendPrivateMessage(bot, chatId, statusMessage, {
           reply_markup: { inline_keyboard: keyboard },
-          parse_mode: 'Markdown',
+          // parse_mode: 'Markdown', // Removed to avoid parsing errors
           disable_web_page_preview: shouldDisablePreview
         });
       }
@@ -1349,8 +1349,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             });
 
             return sendPrivateMessage(bot, chatId, statusMessage, {
-              reply_markup: { inline_keyboard: keyboard },
-              parse_mode: 'Markdown'
+              reply_markup: { inline_keyboard: keyboard }
+              // parse_mode: 'Markdown' // Removed to avoid parsing errors
             });
           } else {
             // Show available events for registration
