@@ -10,6 +10,16 @@ function escapeMarkdown(text: string): string {
   return text.replace(/([*_\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 }
 
+// Function to escape event names for Markdown - handles trailing spaces and special chars
+function escapeEventName(name: string): string {
+  if (!name) return name;
+  // Remove trailing and leading spaces first to prevent Markdown issues
+  const trimmedName = name.trim();
+  // Escape only critical Markdown characters that could break bold formatting
+  // but allow most punctuation to display naturally
+  return trimmedName.replace(/([*_`\\])/g, '\\$1');
+}
+
 // Get telegram separator from settings with short cache
 const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> => {
   try {
@@ -232,7 +242,7 @@ async function generateEventMessage(
     const spectatorCount = activeParticipants.filter(p => p.transportType === 'spectator').length;
     const totalCount = activeParticipants.length;
 
-    message += `🎯 **${event.name}**\n`;
+    message += `🎯 **${escapeEventName(event.name)}**\n`;
     if (event.description) {
       message += `📝 ${event.description}\n`;
     }
@@ -313,7 +323,7 @@ async function updateActiveEventMessages(bot: TelegramBot, storage: IStorage) {
       await bot.editMessageText(updatedMessage, {
         chat_id: messageInfo.chatId,
         message_id: messageInfo.messageId,
-        // parse_mode: 'Markdown', // Removed to avoid parsing errors
+        parse_mode: 'Markdown',
         disable_web_page_preview: shouldDisablePreview
       });
       
@@ -455,7 +465,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
       
       // Send message and store its ID for auto-updates
       const sentMessage = await bot.sendMessage(chatId, message, { 
-        // parse_mode: 'Markdown', // Removed to avoid parsing errors
+        parse_mode: 'Markdown',
         disable_web_page_preview: shouldDisablePreview
       });
 
@@ -526,7 +536,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
             : getTransportTypeLabel(registration.transportType);
           
-          statusMessage += `🎯 **${event?.name}**\n` +
+          statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
             (event?.description ? `📝 ${event.description}\n` : '') +
             `📍 ${event?.location}\n` +
             `🕐 ${formatDateTime(event?.datetime!)}\n` +
@@ -573,7 +583,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
         
         return sendPrivateMessage(bot, chatId, statusMessage, {
           reply_markup: { inline_keyboard: keyboard },
-          // parse_mode: 'Markdown', // Removed to avoid parsing errors
+          parse_mode: 'Markdown',
           disable_web_page_preview: shouldDisablePreview
         });
       }
@@ -1299,7 +1309,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
                 : getTransportTypeLabel(registration.transportType);
               
-              statusMessage += `🎯 **${event?.name}**\n` +
+              statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
                 (event?.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event?.location}\n` +
                 `🕐 ${formatDateTime(event?.datetime!)}\n` +
@@ -1329,7 +1339,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   `\n📊 Зарегистрировано: 🛞${monowheelCount} 🛴${scooterCount} 👀${spectatorCount} (всего: ${totalCount})` : 
                   `\n📊 Пока никто не зарегистрирован`;
                 
-                statusMessage += `🎯 **${event.name}**\n` +
+                statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
                   (event.description ? `📝 ${event.description}\n` : '') +
                   `📍 ${event.location}\n` +
                   `🕐 ${formatDateTime(event.datetime)}${stats}\n\n`;
@@ -1356,8 +1366,8 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             });
 
             return sendPrivateMessage(bot, chatId, statusMessage, {
-              reply_markup: { inline_keyboard: keyboard }
-              // parse_mode: 'Markdown' // Removed to avoid parsing errors
+              reply_markup: { inline_keyboard: keyboard },
+              parse_mode: 'Markdown'
             });
           } else {
             // Show available events for registration
@@ -1693,7 +1703,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
               : getTransportTypeLabel(registration.transportType);
             
-            statusMessage += `🎯 **${event?.name}**\n` +
+            statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
               (event?.description ? `📝 ${event.description}\n` : '') +
               `📍 ${event?.location}\n` +
               `🕐 ${formatDateTime(event?.datetime!)}\n` +
@@ -1720,7 +1730,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           statusMessage += `\n${separator}\n`;
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
-              statusMessage += `🎯 **${event.name}**\n` +
+              statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
                 (event.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}\n\n`;
@@ -1761,7 +1771,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
           return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            // parse_mode: 'Markdown', // Removed to avoid parsing errors
+            parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
           }, msg.message_id);
         }
@@ -1923,7 +1933,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               ? `${getTransportTypeLabel(registration.transportType)} (${registration.transportModel})`
               : getTransportTypeLabel(registration.transportType);
             
-            statusMessage += `🎯 **${event?.name}**\n` +
+            statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
               (event?.description ? `📝 ${event.description}\n` : '') +
               `📍 ${event?.location}\n` +
               `🕐 ${formatDateTime(event?.datetime!)}\n` +
@@ -1950,7 +1960,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           statusMessage += `\n${separator}\n`;
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
-              statusMessage += `🎯 **${event.name}**\n` +
+              statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
                 (event.description ? `📝 ${event.description}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}\n\n`;
@@ -1991,7 +2001,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
           return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            // parse_mode: 'Markdown', // Removed to avoid parsing errors
+            parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
           }, msg.message_id);
         }
