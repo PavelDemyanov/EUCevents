@@ -1754,7 +1754,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
           return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            // parse_mode: 'Markdown', // Removed to avoid parsing errors
+            parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
           }, msg.message_id);
         }
@@ -1984,7 +1984,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
 
           return sendPrivateMessage(bot, chatId, statusMessage, {
             reply_markup: { inline_keyboard: keyboard },
-            // parse_mode: 'Markdown', // Removed to avoid parsing errors
+            parse_mode: 'Markdown',
             disable_web_page_preview: shouldDisablePreviews
           }, msg.message_id);
         }
