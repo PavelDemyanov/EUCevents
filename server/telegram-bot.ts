@@ -20,6 +20,14 @@ function escapeEventName(name: string): string {
   return trimmedName.replace(/([*_`\\])/g, '\\$1');
 }
 
+// Function to escape event descriptions for Markdown - minimal escaping for readability
+function escapeEventDescription(description: string): string {
+  if (!description) return description;
+  // Escape only the most critical Markdown characters that break parsing
+  // Keep most punctuation readable: dots, commas, parentheses, plus, minus are safe
+  return description.replace(/([*_\[\]`\\])/g, '\\$1');
+}
+
 // Get telegram separator from settings with short cache
 const getTelegramSeparator = memoize(async (storage: IStorage): Promise<string> => {
   try {
@@ -244,7 +252,7 @@ async function generateEventMessage(
 
     message += `🎯 **${escapeEventName(event.name)}**\n`;
     if (event.description) {
-      message += `📝 ${event.description}\n`;
+      message += `📝 ${escapeEventDescription(event.description)}\n`;
     }
     message += `📍 ${event.location}\n` +
               `🕐 ${formatDateTime(event.datetime)}\n\n` +
@@ -537,7 +545,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             : getTransportTypeLabel(registration.transportType);
           
           statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
-            (event?.description ? `📝 ${event.description}\n` : '') +
+            (event?.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
             `📍 ${event?.location}\n` +
             `🕐 ${formatDateTime(event?.datetime!)}\n` +
             `🚗 Транспорт: ${transportInfo}\n` +
@@ -627,7 +635,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
             `📅 ${accessibleEvents[0].name}\n` +
-            (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+            (accessibleEvents[0].description ? `📝 ${escapeEventDescription(accessibleEvents[0].description)}\n` : '') +
             `📍 ${accessibleEvents[0].location}\n` +
             `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
@@ -661,7 +669,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           chatId,
           `Добро пожаловать на регистрацию мероприятия!\n\n` +
           `📅 ${accessibleEvents[0].name}\n` +
-          (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+          (accessibleEvents[0].description ? `📝 ${escapeEventDescription(accessibleEvents[0].description)}\n` : '') +
           `📍 ${accessibleEvents[0].location}\n` +
           `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
           `Для регистрации мне потребуется несколько данных.\n` +
@@ -743,7 +751,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             bot,
             chatId,
             `Вы выбрали: "${event.name}"\n` +
-            (event.description ? `📝 ${event.description}\n\n` : '\n') +
+            (event.description ? `📝 ${escapeEventDescription(event.description)}\n\n` : '\n') +
             `📋 Найдены ваши данные из предыдущих регистраций:\n` +
             `👤 ФИО: ${lastRegistration.fullName}\n` +
             `📱 Телефон: ${formatPhoneNumber(lastRegistration.phone)}\n` +
@@ -774,7 +782,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
           bot,
           chatId,
           `Вы выбрали: "${event.name}"\n` +
-          (event.description ? `📝 ${event.description}\n` : '') +
+          (event.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
           `\nПожалуйста, введите ваши ФИО:`,
           {
             disable_web_page_preview: event.disableLinkPreviews
@@ -1310,7 +1318,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                 : getTransportTypeLabel(registration.transportType);
               
               statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
-                (event?.description ? `📝 ${event.description}\n` : '') +
+                (event?.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
                 `📍 ${event?.location}\n` +
                 `🕐 ${formatDateTime(event?.datetime!)}\n` +
                 `🚗 Транспорт: ${transportInfo}\n` +
@@ -1340,7 +1348,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
                   `\n📊 Пока никто не зарегистрирован`;
                 
                 statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
-                  (event.description ? `📝 ${event.description}\n` : '') +
+                  (event.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
                   `📍 ${event.location}\n` +
                   `🕐 ${formatDateTime(event.datetime)}${stats}\n\n`;
               }
@@ -1394,7 +1402,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               return bot.sendMessage(
                 chatId,
                 `🏠 Главное меню\n\n📅 Доступно для регистрации: "${event.name}"\n` +
-                (event.description ? `📝 ${event.description}\n` : '') +
+                (event.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}${stats}\n\n` +
                 `Нажмите кнопку ниже для регистрации:`,
@@ -1704,7 +1712,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               : getTransportTypeLabel(registration.transportType);
             
             statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
-              (event?.description ? `📝 ${event.description}\n` : '') +
+              (event?.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
               `📍 ${event?.location}\n` +
               `🕐 ${formatDateTime(event?.datetime!)}\n` +
               `🚗 Транспорт: ${transportInfo}\n` +
@@ -1731,7 +1739,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
-                (event.description ? `📝 ${event.description}\n` : '') +
+                (event.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}\n\n`;
             }
@@ -1817,7 +1825,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               chatId,
               `Добро пожаловать на регистрацию мероприятия!\n\n` +
               `📅 ${accessibleEvents[0].name}\n` +
-              (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+              (accessibleEvents[0].description ? `📝 ${escapeEventDescription(accessibleEvents[0].description)}\n` : '') +
               `📍 ${accessibleEvents[0].location}\n` +
               `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
               `📋 Найдены ваши данные из предыдущих регистраций:\n` +
@@ -1850,7 +1858,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             chatId,
             `Добро пожаловать на регистрацию мероприятия!\n\n` +
             `📅 ${accessibleEvents[0].name}\n` +
-            (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+            (accessibleEvents[0].description ? `📝 ${escapeEventDescription(accessibleEvents[0].description)}\n` : '') +
             `📍 ${accessibleEvents[0].location}\n` +
             `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
             `Для регистрации мне потребуется несколько данных.\n` +
@@ -1934,7 +1942,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               : getTransportTypeLabel(registration.transportType);
             
             statusMessage += `🎯 **${escapeEventName(event?.name || '')}**\n` +
-              (event?.description ? `📝 ${event.description}\n` : '') +
+              (event?.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
               `📍 ${event?.location}\n` +
               `🕐 ${formatDateTime(event?.datetime!)}\n` +
               `🚗 Транспорт: ${transportInfo}\n` +
@@ -1961,7 +1969,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
             statusMessage += "📝 Доступны для регистрации:\n\n";
             for (const event of unregisteredEvents) {
               statusMessage += `🎯 **${escapeEventName(event.name)}**\n` +
-                (event.description ? `📝 ${event.description}\n` : '') +
+                (event.description ? `📝 ${escapeEventDescription(event.description)}\n` : '') +
                 `📍 ${event.location}\n` +
                 `🕐 ${formatDateTime(event.datetime)}\n\n`;
             }
@@ -2036,7 +2044,7 @@ export async function startTelegramBot(token: string, storage: IStorage) {
               chatId,
               `Добро пожаловать на регистрацию мероприятия!\n\n` +
               `📅 ${accessibleEvents[0].name}\n` +
-              (accessibleEvents[0].description ? `📝 ${accessibleEvents[0].description}\n` : '') +
+              (accessibleEvents[0].description ? `📝 ${escapeEventDescription(accessibleEvents[0].description)}\n` : '') +
               `📍 ${accessibleEvents[0].location}\n` +
               `🕐 ${formatDateTime(accessibleEvents[0].datetime)}\n\n` +
               `📋 Найдены ваши данные из предыдущих регистраций:\n` +
