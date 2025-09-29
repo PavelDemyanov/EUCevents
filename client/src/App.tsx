@@ -115,12 +115,12 @@ function Dashboard() {
                 currentPage === "participants" ? "sidebar-link-active" : ""
               }`}
             >
-              <Users className="w-5 h-5 mr-3" />
-              <div>
+              <Users className="w-5 h-5 mr-3 flex-shrink-0" />
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <div>Участники</div>
                 {selectedEventName && (
-                  <div className="mt-1">
-                    <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full truncate max-w-full">
+                  <div className="mt-1 pr-2">
+                    <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full truncate max-w-full block">
                       {selectedEventName}
                     </span>
                   </div>
